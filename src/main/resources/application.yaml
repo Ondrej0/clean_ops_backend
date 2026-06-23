@@ -1,0 +1,3 @@
+spring:
+  application:
+    name: backend_clean_ops
