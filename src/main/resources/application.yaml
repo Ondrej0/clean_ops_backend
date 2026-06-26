@@ -1,3 +1,16 @@
 spring:
   application:
     name: backend_clean_ops
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cleanops}
+    username: ${SPRING_DATASOURCE_USERNAME:cleanops}
+    password: ${SPRING_DATASOURCE_PASSWORD:cleanops}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
