@@ -1,9 +1,11 @@
 package com.example.backend_clean_ops.controller;
 
+import com.example.backend_clean_ops.dto.request.CreateSiteRequest;
+import com.example.backend_clean_ops.dto.responses.SiteResponse;
 import com.example.backend_clean_ops.service.SiteService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/sites")
@@ -11,4 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class SiteController {
 
     private final SiteService siteService;
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public SiteResponse createSite(@RequestBody CreateSiteRequest request) {
+        return siteService.createSite(request);
+    }
 }
