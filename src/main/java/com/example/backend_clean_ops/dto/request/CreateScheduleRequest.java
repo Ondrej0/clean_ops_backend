@@ -7,5 +7,5 @@ public record CreateScheduleRequest(
     UUID tenantID,
     UUID siteID,
     String name,
-    List<ScheduleRule> scheduleRule
+    List<ScheduleRuleRequest> scheduleRule
 ) {}

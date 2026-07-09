@@ -5,7 +5,7 @@ import com.example.backend_clean_ops.enums.DayOfWeek;
 import java.time.LocalTime;
 
 
-public record ScheduleRule(
+public record ScheduleRuleRequest(
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime
