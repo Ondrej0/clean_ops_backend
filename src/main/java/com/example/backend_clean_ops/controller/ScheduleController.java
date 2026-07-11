@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/schedules")
 @RequiredArgsConstructor
@@ -18,5 +20,11 @@ public class ScheduleController {
     @ResponseStatus(HttpStatus.CREATED)
     public CreateScheduleResponse createAndAssignSchedule(@RequestBody CreateScheduleRequest createScheduleRequest) {
         return scheduleService.createAndAssignSchedule(createScheduleRequest);
+    }
+
+    @PostMapping("/assign/cleaner")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void assignCleanerToSchedule(@RequestParam UUID tenantId, @RequestParam UUID scheduleId, @RequestParam UUID cleanerId) {
+        scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
     }
 }

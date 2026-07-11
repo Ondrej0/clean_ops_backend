@@ -3,18 +3,16 @@ package com.example.backend_clean_ops.service;
 import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
 import com.example.backend_clean_ops.dto.request.ScheduleRuleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
-import com.example.backend_clean_ops.entity.Schedule;
-import com.example.backend_clean_ops.entity.ScheduleRule;
-import com.example.backend_clean_ops.entity.Site;
-import com.example.backend_clean_ops.entity.Tenant;
-import com.example.backend_clean_ops.repository.ScheduleRepository;
-import com.example.backend_clean_ops.repository.ScheduleRuleRepository;
-import com.example.backend_clean_ops.repository.SiteRepository;
-import com.example.backend_clean_ops.repository.TenantRepository;
+import com.example.backend_clean_ops.entity.*;
+import com.example.backend_clean_ops.enums.UserRole;
+import com.example.backend_clean_ops.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +20,8 @@ public class ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
     private final ScheduleRuleRepository  scheduleRuleRepository;
+    private final ScheduleAssignmentRepository scheduleAssignmentRepository;
+    private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final SiteRepository siteRepository;
 
@@ -61,6 +61,56 @@ public class ScheduleService {
 
             scheduleRuleRepository.save(scheduleRuleEntity);
         }
+    }
+    @Transactional
+    public void assignCleanerToSchedule(UUID tenantId, UUID scheduleId, UUID cleanerId)
+    {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new RuntimeException("Tenant not found"));
+
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+
+        User cleaner = userRepository.findById(cleanerId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (cleaner.getRole() != UserRole.CLEANER) {
+            throw new RuntimeException("User is not a cleaner");
+        }
+
+        if (!schedule.getTenant().getId().equals(tenantId)) {
+            throw new RuntimeException("Schedule does not belong to tenant");
+        }
+
+        if (!cleaner.getTenant().getId().equals(tenantId)) {
+            throw new RuntimeException("Cleaner does not belong to tenant");
+        }
+
+        if (scheduleAssignmentRepository
+                .existsByScheduleIdAndUserId(scheduleId, cleanerId)) {
+            throw new RuntimeException("Cleaner is already assigned to this schedule");
+        }
+
+        ScheduleAssignment scheduleAssignment = new ScheduleAssignment();
+
+        scheduleAssignment.setTenant(tenant);
+        scheduleAssignment.setSchedule(schedule);
+        scheduleAssignment.setUser(cleaner);
+
+        scheduleAssignmentRepository.save(scheduleAssignment);
+    }
+
+    private void createShiftsForSchedule(UUID scheduleId, UUID cleanerId)
+    {
+        Optional<List<ScheduleRule>> scheduleRules = scheduleRuleRepository.findByScheduleId(scheduleId);
+
+        if (scheduleRules.isPresent()) {
+            for (ScheduleRule scheduleRule : scheduleRules.get()) {
+                //TODO FINISH shift creation
+            }
+        }
+
+
     }
 
 

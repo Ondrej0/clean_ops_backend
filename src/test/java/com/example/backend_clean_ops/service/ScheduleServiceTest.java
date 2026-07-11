@@ -4,14 +4,14 @@ import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
 import com.example.backend_clean_ops.dto.request.ScheduleRuleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
 import com.example.backend_clean_ops.entity.Schedule;
+import com.example.backend_clean_ops.entity.ScheduleAssignment;
 import com.example.backend_clean_ops.entity.ScheduleRule;
 import com.example.backend_clean_ops.entity.Site;
 import com.example.backend_clean_ops.entity.Tenant;
+import com.example.backend_clean_ops.entity.User;
 import com.example.backend_clean_ops.enums.DayOfWeek;
-import com.example.backend_clean_ops.repository.ScheduleRepository;
-import com.example.backend_clean_ops.repository.ScheduleRuleRepository;
-import com.example.backend_clean_ops.repository.SiteRepository;
-import com.example.backend_clean_ops.repository.TenantRepository;
+import com.example.backend_clean_ops.enums.UserRole;
+import com.example.backend_clean_ops.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +39,12 @@ class ScheduleServiceTest {
     private ScheduleRuleRepository scheduleRuleRepository;
 
     @Mock
+    private ScheduleAssignmentRepository scheduleAssignmentRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private TenantRepository tenantRepository;
 
     @Mock
@@ -51,6 +57,8 @@ class ScheduleServiceTest {
         scheduleService = new ScheduleService(
                 scheduleRepository,
                 scheduleRuleRepository,
+                scheduleAssignmentRepository,
+                userRepository,
                 tenantRepository,
                 siteRepository
         );
@@ -160,5 +168,153 @@ class ScheduleServiceTest {
         verify(tenantRepository).findById(tenantId);
         verifyNoInteractions(siteRepository, scheduleRepository, scheduleRuleRepository);
         verifyNoMoreInteractions(tenantRepository);
+    }
+
+    @Test
+    @DisplayName("Should assign a cleaner to a schedule when all validations pass")
+    void assignCleanerToSchedule_whenDataIsValid_shouldSaveAssignment() {
+        UUID tenantId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+        Tenant tenant = mock(Tenant.class);
+        Tenant cleanerTenant = mock(Tenant.class);
+        Schedule schedule = mock(Schedule.class);
+        User cleaner = mock(User.class);
+        ScheduleAssignment savedAssignment = mock(ScheduleAssignment.class);
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+        when(userRepository.findById(cleanerId)).thenReturn(Optional.of(cleaner));
+        when(cleaner.getRole()).thenReturn(UserRole.CLEANER);
+        when(schedule.getTenant()).thenReturn(tenant);
+        when(tenant.getId()).thenReturn(tenantId);
+        when(cleaner.getTenant()).thenReturn(cleanerTenant);
+        when(cleanerTenant.getId()).thenReturn(tenantId);
+        when(scheduleAssignmentRepository.existsByScheduleIdAndUserId(scheduleId, cleanerId)).thenReturn(false);
+        when(scheduleAssignmentRepository.save(any(ScheduleAssignment.class))).thenReturn(savedAssignment);
+
+        scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
+
+        ArgumentCaptor<ScheduleAssignment> assignmentCaptor = ArgumentCaptor.forClass(ScheduleAssignment.class);
+
+        verify(tenantRepository).findById(tenantId);
+        verify(scheduleRepository).findById(scheduleId);
+        verify(userRepository).findById(cleanerId);
+        verify(scheduleAssignmentRepository).existsByScheduleIdAndUserId(scheduleId, cleanerId);
+        verify(scheduleAssignmentRepository).save(assignmentCaptor.capture());
+
+        ScheduleAssignment savedAssignmentEntity = assignmentCaptor.getValue();
+        assertAll(
+                () -> assertSame(tenant, savedAssignmentEntity.getTenant()),
+                () -> assertSame(schedule, savedAssignmentEntity.getSchedule()),
+                () -> assertSame(cleaner, savedAssignmentEntity.getUser())
+        );
+
+        verifyNoMoreInteractions(
+                tenantRepository,
+                scheduleRepository,
+                userRepository,
+                scheduleAssignmentRepository,
+                scheduleRuleRepository,
+                siteRepository
+        );
+    }
+
+    @Test
+    @DisplayName("Should reject assigning a user who is not a cleaner")
+    void assignCleanerToSchedule_whenUserIsNotCleaner_shouldThrowException() {
+        UUID tenantId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+        Tenant tenant = mock(Tenant.class);
+        Schedule schedule = mock(Schedule.class);
+        User user = mock(User.class);
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+        when(userRepository.findById(cleanerId)).thenReturn(Optional.of(user));
+        when(user.getRole()).thenReturn(UserRole.MANAGER);
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId)
+        );
+
+        assertEquals("User is not a cleaner", exception.getMessage());
+
+        verify(tenantRepository).findById(tenantId);
+        verify(scheduleRepository).findById(scheduleId);
+        verify(userRepository).findById(cleanerId);
+        verify(user).getRole();
+        verifyNoInteractions(scheduleAssignmentRepository);
+        verifyNoMoreInteractions(tenantRepository, scheduleRepository, userRepository);
+    }
+
+    @Test
+    @DisplayName("Should reject assigning a cleaner when the schedule belongs to another tenant")
+    void assignCleanerToSchedule_whenScheduleBelongsToDifferentTenant_shouldThrowException() {
+        UUID tenantId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+        Tenant requestTenant = mock(Tenant.class);
+        Tenant scheduleTenant = mock(Tenant.class);
+        User cleaner = mock(User.class);
+        Schedule schedule = mock(Schedule.class);
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(requestTenant));
+        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+        when(userRepository.findById(cleanerId)).thenReturn(Optional.of(cleaner));
+        when(cleaner.getRole()).thenReturn(UserRole.CLEANER);
+        when(schedule.getTenant()).thenReturn(scheduleTenant);
+        when(scheduleTenant.getId()).thenReturn(UUID.randomUUID());
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId)
+        );
+
+        assertEquals("Schedule does not belong to tenant", exception.getMessage());
+
+        verify(tenantRepository).findById(tenantId);
+        verify(scheduleRepository).findById(scheduleId);
+        verify(userRepository).findById(cleanerId);
+        verify(cleaner).getRole();
+        verify(schedule).getTenant();
+        verify(scheduleTenant).getId();
+        verifyNoInteractions(scheduleAssignmentRepository);
+        verifyNoMoreInteractions(tenantRepository, scheduleRepository, userRepository);
+    }
+
+    @Test
+    @DisplayName("Should reject duplicate cleaner assignment")
+    void assignCleanerToSchedule_whenAlreadyAssigned_shouldThrowException() {
+        UUID tenantId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+        Tenant tenant = mock(Tenant.class);
+        User cleaner = mock(User.class);
+        Schedule schedule = mock(Schedule.class);
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+        when(userRepository.findById(cleanerId)).thenReturn(Optional.of(cleaner));
+        when(cleaner.getRole()).thenReturn(UserRole.CLEANER);
+        when(schedule.getTenant()).thenReturn(tenant);
+        when(tenant.getId()).thenReturn(tenantId);
+        when(cleaner.getTenant()).thenReturn(tenant);
+        when(scheduleAssignmentRepository.existsByScheduleIdAndUserId(scheduleId, cleanerId)).thenReturn(true);
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId)
+        );
+
+        assertEquals("Cleaner is already assigned to this schedule", exception.getMessage());
+
+        verify(tenantRepository).findById(tenantId);
+        verify(scheduleRepository).findById(scheduleId);
+        verify(userRepository).findById(cleanerId);
+        verify(scheduleAssignmentRepository).existsByScheduleIdAndUserId(scheduleId, cleanerId);
+        verifyNoMoreInteractions(tenantRepository, scheduleRepository, userRepository, scheduleAssignmentRepository);
     }
 }

@@ -6,4 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface ScheduleAssignmentRepository extends JpaRepository<ScheduleAssignment, UUID> {
+    boolean existsByScheduleIdAndUserId(UUID scheduleId, UUID userId);
 }

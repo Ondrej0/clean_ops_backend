@@ -10,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -59,6 +61,40 @@ class ScheduleControllerTest {
         assertSame(exception, thrownException);
 
         verify(scheduleService).createAndAssignSchedule(request);
+        verifyNoMoreInteractions(scheduleService);
+    }
+
+    @Test
+    @DisplayName("Should delegate cleaner assignment to schedule service")
+    void assignCleanerToSchedule_shouldCallScheduleService() {
+        UUID tenantId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+
+        scheduleController.assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
+
+        verify(scheduleService).assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
+        verifyNoMoreInteractions(scheduleService);
+    }
+
+    @Test
+    @DisplayName("Should propagate exception when cleaner assignment fails")
+    void assignCleanerToSchedule_whenScheduleServiceThrows_shouldPropagateException() {
+        UUID tenantId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+        RuntimeException exception = new RuntimeException("Unable to assign cleaner");
+
+        doThrow(exception).when(scheduleService).assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
+
+        RuntimeException thrownException = assertThrows(
+                RuntimeException.class,
+                () -> scheduleController.assignCleanerToSchedule(tenantId, scheduleId, cleanerId)
+        );
+
+        assertSame(exception, thrownException);
+
+        verify(scheduleService).assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
         verifyNoMoreInteractions(scheduleService);
     }
 }
