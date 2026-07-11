@@ -28,7 +28,7 @@ public class Schedule extends BaseEntity {
     @JoinColumn(name = "site_id", nullable = false)
     private Site site;
 
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false)
     private String name;
 
     @Builder.Default
