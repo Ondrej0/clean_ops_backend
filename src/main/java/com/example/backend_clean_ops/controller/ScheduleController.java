@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.controller;
 
 import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
+import com.example.backend_clean_ops.dto.request.EditScheduleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
 import com.example.backend_clean_ops.service.ScheduleService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,12 @@ public class ScheduleController {
     @ResponseStatus(HttpStatus.CREATED)
     public CreateScheduleResponse createAndAssignSchedule(@RequestBody CreateScheduleRequest createScheduleRequest) {
         return scheduleService.createAndAssignSchedule(createScheduleRequest);
+    }
+
+    @PostMapping("/edit")
+    @ResponseStatus(HttpStatus.OK)
+    public void editSchedule(@RequestBody EditScheduleRequest request) {
+        scheduleService.editSchedule(request);
     }
 
     @PostMapping("/assign/cleaner")

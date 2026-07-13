@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.service;
 
 import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
+import com.example.backend_clean_ops.dto.request.EditScheduleRequest;
 import com.example.backend_clean_ops.dto.request.ScheduleRuleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
 import com.example.backend_clean_ops.entity.Schedule;
@@ -16,6 +17,7 @@ import com.example.backend_clean_ops.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 // Coordinates schedule creation, rule persistence, and shift generation.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ScheduleService {
@@ -77,6 +80,25 @@ public class ScheduleService {
             scheduleRuleRepository.save(scheduleRuleEntity);
         }
     }
+
+    private void deleteScheduleRulesForSchedule(Schedule schedule) {
+        Long numberOfDeletedRules = scheduleRuleRepository.deleteByScheduleId(schedule.getId());
+        log.info("Number of deleted schedule rules for this schedule: {}", numberOfDeletedRules);
+    }
+    @Transactional
+    public void editSchedule(EditScheduleRequest request) {
+        Schedule schedule  = scheduleRepository.findById(request.scheduleID())
+                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+
+        schedule.setName(request.name());
+
+        deleteScheduleRulesForSchedule(schedule);
+        createAndAssignScheduleRuleToSchedule(request.scheduleRule(), schedule, schedule.getTenant());
+
+        scheduleRepository.save(schedule);
+    }
+
+    //TODO delete shifts on EDIT
 
     @Transactional
     public void assignCleanerToSchedule(UUID tenantId, UUID scheduleId, UUID cleanerId) {

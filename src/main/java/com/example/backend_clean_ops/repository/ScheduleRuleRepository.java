@@ -9,4 +9,7 @@ import java.util.UUID;
 
 public interface ScheduleRuleRepository extends JpaRepository<ScheduleRule, UUID> {
     Optional<List<ScheduleRule>> findByScheduleId(UUID scheduleId);
+
+    long deleteByScheduleId(UUID scheduleId);
+
 }
