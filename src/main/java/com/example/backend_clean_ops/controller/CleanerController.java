@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+// Exposes cleaner onboarding endpoints backed by the shared user service.
 @RestController
 @RequestMapping("/api/cleaner")
 @RequiredArgsConstructor

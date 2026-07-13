@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+// Exposes schedule creation and cleaner-assignment endpoints.
 @RestController
 @RequestMapping("/api/schedules")
 @RequiredArgsConstructor

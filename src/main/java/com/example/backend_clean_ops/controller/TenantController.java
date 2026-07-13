@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+// Exposes tenant creation endpoints for onboarding and setup flows.
 @RestController
 @RequestMapping("/api/tenant")
 @RequiredArgsConstructor

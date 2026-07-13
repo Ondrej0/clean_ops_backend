@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+// Exposes site creation endpoints tied to tenant setup.
 @RestController
 @RequestMapping("/api/sites")
 @RequiredArgsConstructor

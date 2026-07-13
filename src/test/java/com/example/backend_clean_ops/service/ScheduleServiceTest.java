@@ -6,10 +6,12 @@ import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
 import com.example.backend_clean_ops.entity.Schedule;
 import com.example.backend_clean_ops.entity.ScheduleAssignment;
 import com.example.backend_clean_ops.entity.ScheduleRule;
+import com.example.backend_clean_ops.entity.Shift;
 import com.example.backend_clean_ops.entity.Site;
 import com.example.backend_clean_ops.entity.Tenant;
 import com.example.backend_clean_ops.entity.User;
 import com.example.backend_clean_ops.enums.DayOfWeek;
+import com.example.backend_clean_ops.enums.ShiftStatus;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -50,6 +53,9 @@ class ScheduleServiceTest {
     @Mock
     private SiteRepository siteRepository;
 
+    @Mock
+    private ShiftRepository shiftRepository;
+
     private ScheduleService scheduleService;
 
     @BeforeEach
@@ -60,7 +66,8 @@ class ScheduleServiceTest {
                 scheduleAssignmentRepository,
                 userRepository,
                 tenantRepository,
-                siteRepository
+                siteRepository,
+                shiftRepository
         );
     }
 
@@ -171,8 +178,118 @@ class ScheduleServiceTest {
     }
 
     @Test
-    @DisplayName("Should assign a cleaner to a schedule when all validations pass")
-    void assignCleanerToSchedule_whenDataIsValid_shouldSaveAssignment() {
+    @DisplayName("Should assign a cleaner and generate shifts for each schedule rule")
+    void assignCleanerToSchedule_whenDataIsValid_shouldSaveAssignmentAndGenerateShifts() {
+        UUID tenantId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+        Tenant tenant = mock(Tenant.class);
+        Tenant cleanerTenant = mock(Tenant.class);
+        Schedule schedule = mock(Schedule.class);
+        Site site = mock(Site.class);
+        User cleaner = mock(User.class);
+        ScheduleAssignment savedAssignment = mock(ScheduleAssignment.class);
+        ScheduleRule weekdayRule = mock(ScheduleRule.class);
+        ScheduleRule overnightRule = mock(ScheduleRule.class);
+
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+        when(userRepository.findById(cleanerId)).thenReturn(Optional.of(cleaner));
+        when(cleaner.getRole()).thenReturn(UserRole.CLEANER);
+        when(schedule.getId()).thenReturn(scheduleId);
+        when(schedule.getTenant()).thenReturn(tenant);
+        when(schedule.getSite()).thenReturn(site);
+        when(tenant.getId()).thenReturn(tenantId);
+        when(cleaner.getTenant()).thenReturn(cleanerTenant);
+        when(cleanerTenant.getId()).thenReturn(tenantId);
+        when(scheduleAssignmentRepository.existsByScheduleIdAndUserId(scheduleId, cleanerId)).thenReturn(false);
+        when(scheduleAssignmentRepository.save(any(ScheduleAssignment.class))).thenReturn(savedAssignment);
+        when(scheduleRuleRepository.findByScheduleId(scheduleId)).thenReturn(Optional.of(List.of(weekdayRule, overnightRule)));
+        when(weekdayRule.getDayOfWeek()).thenReturn(DayOfWeek.MONDAY);
+        when(weekdayRule.getStartTime()).thenReturn(LocalTime.of(9, 0));
+        when(weekdayRule.getEndTime()).thenReturn(LocalTime.of(17, 0));
+        when(overnightRule.getDayOfWeek()).thenReturn(DayOfWeek.WEDNESDAY);
+        when(overnightRule.getStartTime()).thenReturn(LocalTime.of(22, 0));
+        when(overnightRule.getEndTime()).thenReturn(LocalTime.of(2, 0));
+        when(shiftRepository.save(any(Shift.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
+
+        ArgumentCaptor<ScheduleAssignment> assignmentCaptor = ArgumentCaptor.forClass(ScheduleAssignment.class);
+        ArgumentCaptor<Shift> shiftCaptor = ArgumentCaptor.forClass(Shift.class);
+
+        verify(tenantRepository).findById(tenantId);
+        verify(scheduleRepository).findById(scheduleId);
+        verify(userRepository).findById(cleanerId);
+        verify(scheduleAssignmentRepository).existsByScheduleIdAndUserId(scheduleId, cleanerId);
+        verify(scheduleAssignmentRepository).save(assignmentCaptor.capture());
+        verify(scheduleRuleRepository).findByScheduleId(scheduleId);
+        verify(shiftRepository, times(10)).save(shiftCaptor.capture());
+
+        ScheduleAssignment savedAssignmentEntity = assignmentCaptor.getValue();
+        assertAll(
+                () -> assertSame(tenant, savedAssignmentEntity.getTenant()),
+                () -> assertSame(schedule, savedAssignmentEntity.getSchedule()),
+                () -> assertSame(cleaner, savedAssignmentEntity.getUser())
+        );
+
+        List<Shift> savedShifts = shiftCaptor.getAllValues();
+        assertEquals(10, savedShifts.size());
+
+        LocalDate today = LocalDate.now();
+        LocalDate mondayStart = today.with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.MONDAY));
+        LocalDate wednesdayStart = today.with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.WEDNESDAY));
+
+        for (int i = 0; i < 5; i++) {
+            Shift shift = savedShifts.get(i);
+            LocalDate expectedDate = mondayStart.plusWeeks(i);
+            LocalDateTime expectedStart = LocalDateTime.of(expectedDate, LocalTime.of(9, 0));
+            LocalDateTime expectedEnd = LocalDateTime.of(expectedDate, LocalTime.of(17, 0));
+
+            assertAll(
+                    () -> assertSame(tenant, shift.getTenant()),
+                    () -> assertSame(site, shift.getSite()),
+                    () -> assertSame(schedule, shift.getSchedule()),
+                    () -> assertSame(cleaner, shift.getUser()),
+                    () -> assertEquals(expectedDate, shift.getShiftDate()),
+                    () -> assertEquals(expectedStart, shift.getScheduledStart()),
+                    () -> assertEquals(expectedEnd, shift.getScheduledEnd()),
+                    () -> assertEquals(ShiftStatus.SCHEDULED, shift.getStatus())
+            );
+        }
+
+        for (int i = 5; i < 10; i++) {
+            Shift shift = savedShifts.get(i);
+            LocalDate expectedDate = wednesdayStart.plusWeeks(i - 5);
+            LocalDateTime expectedStart = LocalDateTime.of(expectedDate, LocalTime.of(22, 0));
+            LocalDateTime expectedEnd = LocalDateTime.of(expectedDate.plusDays(1), LocalTime.of(2, 0));
+
+            assertAll(
+                    () -> assertSame(tenant, shift.getTenant()),
+                    () -> assertSame(site, shift.getSite()),
+                    () -> assertSame(schedule, shift.getSchedule()),
+                    () -> assertSame(cleaner, shift.getUser()),
+                    () -> assertEquals(expectedDate, shift.getShiftDate()),
+                    () -> assertEquals(expectedStart, shift.getScheduledStart()),
+                    () -> assertEquals(expectedEnd, shift.getScheduledEnd()),
+                    () -> assertEquals(ShiftStatus.SCHEDULED, shift.getStatus())
+            );
+        }
+
+        verifyNoMoreInteractions(
+                tenantRepository,
+                scheduleRepository,
+                userRepository,
+                scheduleAssignmentRepository,
+                scheduleRuleRepository,
+                siteRepository,
+                shiftRepository
+        );
+    }
+
+    @Test
+    @DisplayName("Should assign a cleaner without creating shifts when no schedule rules exist")
+    void assignCleanerToSchedule_whenNoScheduleRulesExist_shouldSaveAssignmentOnly() {
         UUID tenantId = UUID.randomUUID();
         UUID scheduleId = UUID.randomUUID();
         UUID cleanerId = UUID.randomUUID();
@@ -186,37 +303,32 @@ class ScheduleServiceTest {
         when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
         when(userRepository.findById(cleanerId)).thenReturn(Optional.of(cleaner));
         when(cleaner.getRole()).thenReturn(UserRole.CLEANER);
+        when(schedule.getId()).thenReturn(scheduleId);
         when(schedule.getTenant()).thenReturn(tenant);
         when(tenant.getId()).thenReturn(tenantId);
         when(cleaner.getTenant()).thenReturn(cleanerTenant);
         when(cleanerTenant.getId()).thenReturn(tenantId);
         when(scheduleAssignmentRepository.existsByScheduleIdAndUserId(scheduleId, cleanerId)).thenReturn(false);
         when(scheduleAssignmentRepository.save(any(ScheduleAssignment.class))).thenReturn(savedAssignment);
+        when(scheduleRuleRepository.findByScheduleId(scheduleId)).thenReturn(Optional.empty());
 
         scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
-
-        ArgumentCaptor<ScheduleAssignment> assignmentCaptor = ArgumentCaptor.forClass(ScheduleAssignment.class);
 
         verify(tenantRepository).findById(tenantId);
         verify(scheduleRepository).findById(scheduleId);
         verify(userRepository).findById(cleanerId);
         verify(scheduleAssignmentRepository).existsByScheduleIdAndUserId(scheduleId, cleanerId);
-        verify(scheduleAssignmentRepository).save(assignmentCaptor.capture());
-
-        ScheduleAssignment savedAssignmentEntity = assignmentCaptor.getValue();
-        assertAll(
-                () -> assertSame(tenant, savedAssignmentEntity.getTenant()),
-                () -> assertSame(schedule, savedAssignmentEntity.getSchedule()),
-                () -> assertSame(cleaner, savedAssignmentEntity.getUser())
-        );
-
+        verify(scheduleAssignmentRepository).save(any(ScheduleAssignment.class));
+        verify(scheduleRuleRepository).findByScheduleId(scheduleId);
+        verifyNoInteractions(shiftRepository);
         verifyNoMoreInteractions(
                 tenantRepository,
                 scheduleRepository,
                 userRepository,
                 scheduleAssignmentRepository,
                 scheduleRuleRepository,
-                siteRepository
+                siteRepository,
+                shiftRepository
         );
     }
 

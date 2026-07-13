@@ -7,6 +7,7 @@ import com.example.backend_clean_ops.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+// Creates tenants from request data and returns the generated identifier payload.
 @Service
 @RequiredArgsConstructor
 public class TenantService {

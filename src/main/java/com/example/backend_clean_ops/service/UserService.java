@@ -10,6 +10,7 @@ import com.example.backend_clean_ops.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+// Creates tenant-scoped users and returns a compact creation response.
 @Service
 @RequiredArgsConstructor
 public class UserService {

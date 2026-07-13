@@ -9,6 +9,7 @@ import com.example.backend_clean_ops.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+// Creates sites for an existing tenant and maps them into API responses.
 @Service
 @RequiredArgsConstructor
 public class SiteService {
