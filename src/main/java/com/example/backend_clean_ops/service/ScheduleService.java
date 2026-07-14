@@ -87,18 +87,48 @@ public class ScheduleService {
     }
     @Transactional
     public void editSchedule(EditScheduleRequest request) {
-        Schedule schedule  = scheduleRepository.findById(request.scheduleID())
+        Schedule schedule = scheduleRepository.findById(request.scheduleID())
                 .orElseThrow(() -> new RuntimeException("Schedule not found"));
 
         schedule.setName(request.name());
 
+        deleteFutureScheduledShifts(schedule);
         deleteScheduleRulesForSchedule(schedule);
-        createAndAssignScheduleRuleToSchedule(request.scheduleRule(), schedule, schedule.getTenant());
 
-        scheduleRepository.save(schedule);
+        createAndAssignScheduleRuleToSchedule(
+                request.scheduleRule(),
+                schedule,
+                schedule.getTenant()
+        );
+
+        List<ScheduleAssignment> assignments =
+                scheduleAssignmentRepository.findByScheduleId(schedule.getId());
+
+        for (ScheduleAssignment assignment : assignments) {
+            createShiftsForSchedule(
+                    schedule,
+                    assignment.getUser(),
+                    schedule.getTenant()
+            );
+        }
     }
 
     //TODO delete shifts on EDIT
+
+    private void deleteFutureScheduledShifts(Schedule schedule) {
+        long deletedShifts =
+                shiftRepository.deleteByScheduleIdAndShiftDateGreaterThanEqualAndStatus(
+                        schedule.getId(),
+                        LocalDate.now(),
+                        ShiftStatus.SCHEDULED
+                );
+
+        log.info(
+                "Deleted {} future shifts for schedule {}",
+                deletedShifts,
+                schedule.getId()
+        );
+    }
 
     @Transactional
     public void assignCleanerToSchedule(UUID tenantId, UUID scheduleId, UUID cleanerId) {

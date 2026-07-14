@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.service;
 
 import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
+import com.example.backend_clean_ops.dto.request.EditScheduleRequest;
 import com.example.backend_clean_ops.dto.request.ScheduleRuleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
 import com.example.backend_clean_ops.entity.Schedule;
@@ -175,6 +176,97 @@ class ScheduleServiceTest {
         verify(tenantRepository).findById(tenantId);
         verifyNoInteractions(siteRepository, scheduleRepository, scheduleRuleRepository);
         verifyNoMoreInteractions(tenantRepository);
+    }
+
+    @Test
+    @DisplayName("Should delete future scheduled shifts, replace rules, and regenerate shifts when editing a schedule")
+    void editSchedule_whenScheduleExists_shouldReplaceRulesAndRegenerateShifts() {
+        UUID tenantId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        Tenant tenant = mock(Tenant.class);
+        Site site = mock(Site.class);
+        Schedule schedule = mock(Schedule.class);
+        User cleaner = mock(User.class);
+        ScheduleAssignment assignment = mock(ScheduleAssignment.class);
+        ScheduleRule newRule = mock(ScheduleRule.class);
+        EditScheduleRequest request = new EditScheduleRequest(
+                tenantId,
+                scheduleId,
+                "Updated Weekday Shift",
+                List.of(new ScheduleRuleRequest(
+                        DayOfWeek.MONDAY,
+                        LocalTime.of(9, 0),
+                        LocalTime.of(17, 0)
+                ))
+        );
+
+        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+        when(schedule.getId()).thenReturn(scheduleId);
+        when(schedule.getTenant()).thenReturn(tenant);
+        when(schedule.getSite()).thenReturn(site);
+        when(scheduleAssignmentRepository.findByScheduleId(scheduleId)).thenReturn(List.of(assignment));
+        when(assignment.getUser()).thenReturn(cleaner);
+        when(scheduleRuleRepository.findByScheduleId(scheduleId)).thenReturn(Optional.of(List.of(newRule)));
+        when(newRule.getDayOfWeek()).thenReturn(DayOfWeek.MONDAY);
+        when(newRule.getStartTime()).thenReturn(LocalTime.of(9, 0));
+        when(newRule.getEndTime()).thenReturn(LocalTime.of(17, 0));
+        when(shiftRepository.save(any(Shift.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        scheduleService.editSchedule(request);
+
+        ArgumentCaptor<ScheduleRule> ruleCaptor = ArgumentCaptor.forClass(ScheduleRule.class);
+        ArgumentCaptor<Shift> shiftCaptor = ArgumentCaptor.forClass(Shift.class);
+
+        verify(scheduleRepository).findById(scheduleId);
+        verify(schedule).setName("Updated Weekday Shift");
+        verify(shiftRepository).deleteByScheduleIdAndShiftDateGreaterThanEqualAndStatus(
+                eq(scheduleId),
+                eq(LocalDate.now()),
+                eq(ShiftStatus.SCHEDULED)
+        );
+        verify(scheduleRuleRepository).deleteByScheduleId(scheduleId);
+        verify(scheduleRuleRepository).save(ruleCaptor.capture());
+        verify(scheduleRuleRepository).findByScheduleId(scheduleId);
+        verify(scheduleAssignmentRepository).findByScheduleId(scheduleId);
+        verify(shiftRepository, times(5)).save(shiftCaptor.capture());
+
+        ScheduleRule savedRule = ruleCaptor.getValue();
+        assertAll(
+                () -> assertSame(tenant, savedRule.getTenant()),
+                () -> assertSame(schedule, savedRule.getSchedule()),
+                () -> assertEquals(DayOfWeek.MONDAY, savedRule.getDayOfWeek()),
+                () -> assertEquals(LocalTime.of(9, 0), savedRule.getStartTime()),
+                () -> assertEquals(LocalTime.of(17, 0), savedRule.getEndTime())
+        );
+
+        List<Shift> savedShifts = shiftCaptor.getAllValues();
+        assertEquals(5, savedShifts.size());
+
+        LocalDate expectedStartDate = LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.MONDAY));
+        for (int i = 0; i < savedShifts.size(); i++) {
+            Shift shift = savedShifts.get(i);
+            LocalDate expectedDate = expectedStartDate.plusWeeks(i);
+            LocalDateTime expectedStart = LocalDateTime.of(expectedDate, LocalTime.of(9, 0));
+            LocalDateTime expectedEnd = LocalDateTime.of(expectedDate, LocalTime.of(17, 0));
+
+            assertAll(
+                    () -> assertSame(tenant, shift.getTenant()),
+                    () -> assertSame(site, shift.getSite()),
+                    () -> assertSame(schedule, shift.getSchedule()),
+                    () -> assertSame(cleaner, shift.getUser()),
+                    () -> assertEquals(expectedDate, shift.getShiftDate()),
+                    () -> assertEquals(expectedStart, shift.getScheduledStart()),
+                    () -> assertEquals(expectedEnd, shift.getScheduledEnd()),
+                    () -> assertEquals(ShiftStatus.SCHEDULED, shift.getStatus())
+            );
+        }
+
+        verifyNoMoreInteractions(
+                scheduleRepository,
+                scheduleRuleRepository,
+                scheduleAssignmentRepository,
+                shiftRepository
+        );
     }
 
     @Test
