@@ -35,4 +35,7 @@ public class ScheduleController {
     public void assignCleanerToSchedule(@RequestParam UUID tenantId, @RequestParam UUID scheduleId, @RequestParam UUID cleanerId) {
         scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
     }
+
+    //TODO DeactivateShedule
+    //TODO Unassign Cleaner
 }
