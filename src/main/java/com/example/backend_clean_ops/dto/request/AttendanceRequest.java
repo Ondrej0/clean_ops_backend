@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record AttendanceRequest(
         UUID tenantID,
+        UUID siteID,
         UUID shiftID,
         UUID userID,
         LocalDateTime clockedIn

@@ -1,11 +1,8 @@
 package com.example.backend_clean_ops.dto.responses;
 
-import com.example.backend_clean_ops.enums.CleanerShiftStatus;
-
-import java.time.LocalDateTime;
+import com.example.backend_clean_ops.enums.ShiftStatus;
 
 public record AttendanceResponse(
-        CleanerShiftStatus cleanerShiftStatus,
-        LocalDateTime timeRegistered
+        ShiftStatus shiftStatus
 ) {
 }
