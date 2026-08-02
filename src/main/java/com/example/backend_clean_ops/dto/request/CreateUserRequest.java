@@ -7,5 +7,6 @@ public record CreateUserRequest(
        String firstName,
        String lastName,
        String passwordHash,
+       String  email,
        Float payRate
 ) {}
