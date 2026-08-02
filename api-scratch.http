@@ -1,0 +1,106 @@
+### Local API base
+@baseUrl = http://localhost:8080
+
+### Create a tenant
+POST {{baseUrl}}/api/tenant
+Content-Type: application/json
+
+{
+  "name": "Northwind Cleaning",
+  "contactName": "Alex Morgan",
+  "contactEmail": "alex.morgan@example.com",
+  "addressLine1": "12 High Street",
+  "city": "London",
+  "postcode": "SW1A 1AA"
+}
+
+### Create a site
+POST {{baseUrl}}/api/sites
+Content-Type: application/json
+
+{
+  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "name": "London HQ",
+  "addressLine1": "1 Station Road",
+  "city": "London",
+  "postcode": "EC1A 1BB"
+}
+
+### Create a cleaner user
+POST {{baseUrl}}/api/cleaner
+Content-Type: application/json
+
+{
+  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "firstName": "Jamie",
+  "lastName": "Taylor",
+  "passwordHash": "change-me",
+  "email": "email@email.com",
+  "payRate": 15.5
+}
+
+### Create a schedule
+POST {{baseUrl}}/api/schedules
+Content-Type: application/json
+
+{
+  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "siteID": "3019ed9c-025f-439f-a512-9c732f16e0e6",
+  "name": "Weekday Morning",
+  "scheduleRule": [
+    {
+      "dayOfWeek": "MONDAY",
+      "startTime": "08:00:00",
+      "endTime": "12:00:00"
+    },
+    {
+      "dayOfWeek": "WEDNESDAY",
+      "startTime": "08:00:00",
+      "endTime": "12:00:00"
+    }
+  ]
+}
+
+### Edit a schedule
+POST {{baseUrl}}/api/schedules/edit
+Content-Type: application/json
+
+{
+  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "scheduleID": "7f558ad7-e9e5-4a3d-997d-d39ffbc431ea",
+  "name": "Weekday Morning Updated",
+  "scheduleRule": [
+    {
+      "dayOfWeek": "TUESDAY",
+      "startTime": "09:00:00",
+      "endTime": "13:00:00"
+    }
+  ]
+}
+
+### Assign a cleaner to a schedule
+POST {{baseUrl}}/api/schedules/assign/cleaner?tenantId=fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d&scheduleId=7f558ad7-e9e5-4a3d-997d-d39ffbc431ea&cleanerId=6cd3c765-b1e8-4d50-b60f-fef5ba006155
+
+### Clock in
+POST {{baseUrl}}/api/attendance/clockIn
+Content-Type: application/json
+
+{
+  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "siteID": "3019ed9c-025f-439f-a512-9c732f16e0e6",
+  "shiftID": "69b71f7c-4ad7-4391-8758-d85ecabf1de5",
+  "userID": "6cd3c765-b1e8-4d50-b60f-fef5ba006155",
+  "clockedIn": "2026-08-02T09:00:00"
+}
+
+### Clock out
+POST {{baseUrl}}/api/attendance/clockOut
+Content-Type: application/json
+
+{
+  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "siteID": "3019ed9c-025f-439f-a512-9c732f16e0e6",
+  "shiftID": "69b71f7c-4ad7-4391-8758-d85ecabf1de5",
+  "userID": "6cd3c765-b1e8-4d50-b60f-fef5ba006155",
+  "clockedIn": "2026-08-02T12:00:00"
+}
