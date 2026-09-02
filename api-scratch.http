@@ -6,11 +6,11 @@ POST {{baseUrl}}/api/tenant
 Content-Type: application/json
 
 {
-  "name": "Northwind Cleaning",
-  "contactName": "Alex Morgan",
-  "contactEmail": "alex.morgan@example.com",
-  "addressLine1": "12 High Street",
-  "city": "London",
+  "name": "TestTenant",
+  "contactName": "Testname TestSurname",
+  "contactEmail": "test@example.com",
+  "addressLine1": "12 Test Street",
+  "city": "Testcity",
   "postcode": "SW1A 1AA"
 }
 
@@ -19,11 +19,11 @@ POST {{baseUrl}}/api/sites
 Content-Type: application/json
 
 {
-  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
-  "name": "London HQ",
-  "addressLine1": "1 Station Road",
-  "city": "London",
-  "postcode": "EC1A 1BB"
+  "tenantID": "e9a0e768-4d60-443c-b6c8-d761ef26061e",
+  "name": "Test London HQ",
+  "addressLine1": "1 Test Road",
+  "city": "Testcity",
+  "postcode": "EC1A TES"
 }
 
 ### Create a cleaner user
@@ -31,7 +31,7 @@ POST {{baseUrl}}/api/cleaner
 Content-Type: application/json
 
 {
-  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "tenantID": "e9a0e768-4d60-443c-b6c8-d761ef26061e",
   "firstName": "Jamie",
   "lastName": "Taylor",
   "passwordHash": "change-me",
