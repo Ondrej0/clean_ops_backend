@@ -43,6 +43,9 @@ Content-Type: application/json
   "payRate": 15.5
 }
 
+### Get cleaners
+GET {{baseUrl}}/api/cleaner?tenantID=e9a0e768-4d60-443c-b6c8-d761ef26061e
+
 ### Create a schedule
 POST {{baseUrl}}/api/schedules
 Content-Type: application/json
