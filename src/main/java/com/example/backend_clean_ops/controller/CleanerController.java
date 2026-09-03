@@ -30,4 +30,9 @@ public class CleanerController {
     public GetCleanersResponse getCleaners(@RequestParam UUID tenantID){
         return userService.getCleaners(tenantID);
     }
+//TODO finish this method and finish teh response object too -- GetCleanerDataResponse
+//    @GetMapping("/{userID")
+//    @ResponseStatus(HttpStatus.OK)
+//    public
+
 }
