@@ -1,7 +1,9 @@
 package com.example.backend_clean_ops.service;
 
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
+import com.example.backend_clean_ops.dto.responses.CleanerResponse;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
+import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
 import com.example.backend_clean_ops.entity.Tenant;
 import com.example.backend_clean_ops.entity.User;
 import com.example.backend_clean_ops.enums.UserRole;
@@ -16,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,6 +54,7 @@ class UserServiceTest {
                 "Jane",
                 "Doe",
                 "hashed-password",
+                "jane@example.com",
                 19.50f
         );
 
@@ -80,6 +84,7 @@ class UserServiceTest {
                 () -> assertEquals("Jane", savedUserEntity.getFirstName()),
                 () -> assertEquals("Doe", savedUserEntity.getLastName()),
                 () -> assertEquals("hashed-password", savedUserEntity.getPasswordHash()),
+                () -> assertEquals("jane@example.com", savedUserEntity.getEmail()),
                 () -> assertEquals(UserRole.CLEANER, savedUserEntity.getRole())
         );
 
@@ -95,6 +100,7 @@ class UserServiceTest {
                 "Jane",
                 "Doe",
                 "hashed-password",
+                "jane@example.com",
                 19.50f
         );
 
@@ -110,5 +116,53 @@ class UserServiceTest {
         verify(tenantRepository).findById(tenantId);
         verifyNoInteractions(userRepository);
         verifyNoMoreInteractions(tenantRepository);
+    }
+
+    @Test
+    @DisplayName("Should return cleaners mapped into cleaner responses for tenant")
+    void getCleaners_whenCleanersExist_shouldReturnMappedCleanerResponses() {
+        UUID tenantId = UUID.randomUUID();
+        UUID firstCleanerId = UUID.randomUUID();
+        UUID secondCleanerId = UUID.randomUUID();
+        User firstCleaner = mock(User.class);
+        User secondCleaner = mock(User.class);
+
+        when(userRepository.findAllByTenantIdAndRole(tenantId, UserRole.CLEANER))
+                .thenReturn(List.of(firstCleaner, secondCleaner));
+        when(firstCleaner.getId()).thenReturn(firstCleanerId);
+        when(firstCleaner.getFirstName()).thenReturn("Jane");
+        when(firstCleaner.getLastName()).thenReturn("Doe");
+        when(firstCleaner.getEmail()).thenReturn("jane@example.com");
+        when(firstCleaner.getPhone()).thenReturn("07123456789");
+        when(secondCleaner.getId()).thenReturn(secondCleanerId);
+        when(secondCleaner.getFirstName()).thenReturn("John");
+        when(secondCleaner.getLastName()).thenReturn("Smith");
+        when(secondCleaner.getEmail()).thenReturn("john@example.com");
+        when(secondCleaner.getPhone()).thenReturn("07987654321");
+
+        GetCleanersResponse response = userService.getCleaners(tenantId);
+
+        assertEquals(List.of(
+                new CleanerResponse(firstCleanerId, "Jane", "Doe", "jane@example.com", "07123456789"),
+                new CleanerResponse(secondCleanerId, "John", "Smith", "john@example.com", "07987654321")
+        ), response.cleaners());
+
+        verify(userRepository).findAllByTenantIdAndRole(tenantId, UserRole.CLEANER);
+        verifyNoInteractions(tenantRepository);
+        verifyNoMoreInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("Should return an empty list when tenant has no cleaners")
+    void getCleaners_whenNoCleanersExist_shouldReturnEmptyResponse() {
+        UUID tenantId = UUID.randomUUID();
+        when(userRepository.findAllByTenantIdAndRole(tenantId, UserRole.CLEANER)).thenReturn(List.of());
+
+        GetCleanersResponse response = userService.getCleaners(tenantId);
+
+        assertTrue(response.cleaners().isEmpty());
+        verify(userRepository).findAllByTenantIdAndRole(tenantId, UserRole.CLEANER);
+        verifyNoInteractions(tenantRepository);
+        verifyNoMoreInteractions(userRepository);
     }
 }

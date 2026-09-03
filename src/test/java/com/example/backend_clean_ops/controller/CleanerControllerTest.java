@@ -2,6 +2,7 @@ package com.example.backend_clean_ops.controller;
 
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
+import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -71,6 +74,20 @@ class CleanerControllerTest {
         assertSame(exception, thrownException);
 
         verify(userService).createUser(request, UserRole.CLEANER);
+        verifyNoMoreInteractions(userService);
+    }
+
+    @Test
+    @DisplayName("Should delegate listing cleaners to the user service")
+    void getCleaners_shouldReturnServiceResponse() {
+        UUID tenantId = UUID.randomUUID();
+        GetCleanersResponse expectedResponse = mock(GetCleanersResponse.class);
+        when(userService.getCleaners(tenantId)).thenReturn(expectedResponse);
+
+        GetCleanersResponse actualResponse = cleanerController.getCleaners(tenantId);
+
+        assertSame(expectedResponse, actualResponse);
+        verify(userService).getCleaners(tenantId);
         verifyNoMoreInteractions(userService);
     }
 }
