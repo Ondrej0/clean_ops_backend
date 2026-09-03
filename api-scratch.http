@@ -26,6 +26,10 @@ Content-Type: application/json
   "postcode": "EC1A TES"
 }
 
+### Get Sites by Tenant ID
+GET {{baseUrl}}/api/sites?tenantID=e9a0e768-4d60-443c-b6c8-d761ef26061e
+Content-Type: application/json
+
 ### Create a cleaner user
 POST {{baseUrl}}/api/cleaner
 Content-Type: application/json
