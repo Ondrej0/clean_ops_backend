@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record GetScheduleResponse(
-        UUID scheduleID,
+        UUID scheduleId,
         String name,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,

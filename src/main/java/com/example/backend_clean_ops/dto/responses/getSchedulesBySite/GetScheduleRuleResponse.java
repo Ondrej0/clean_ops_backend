@@ -6,7 +6,7 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 public record GetScheduleRuleResponse(
-        UUID scheduleRuleID,
+        UUID scheduleRuleId,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime
