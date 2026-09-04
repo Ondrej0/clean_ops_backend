@@ -1,5 +1,6 @@
 package com.example.backend_clean_ops.dto.request;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public record CreateUserRequest(
@@ -9,5 +10,5 @@ public record CreateUserRequest(
        //TODO this should be password as text and get hashed in the backend
        String passwordHash,
        String  email,
-       Float payRate
+       BigDecimal payRate
 ) {}

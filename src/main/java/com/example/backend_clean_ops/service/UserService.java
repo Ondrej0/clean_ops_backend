@@ -43,6 +43,7 @@ public class UserService {
         //TODO take password as test and hash it
         user.setPasswordHash(request.passwordHash());
         user.setEmail(request.email());
+        user.setPayRate(request.payRate());
         user.setRole(userRole);
 
         User savedUser = userRepository.save(user);
