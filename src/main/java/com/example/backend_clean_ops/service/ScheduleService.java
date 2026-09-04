@@ -56,12 +56,14 @@ public class ScheduleService {
                         scheduleRepository.findAllBySiteIdAndActiveTrue(site.getId())
                                 .stream()
                                 .map(schedule -> new GetScheduleResponse(
+                                        schedule.getId(),
                                         schedule.getName(),
                                         schedule.getCreatedAt(),
                                         schedule.getUpdatedAt(),
                                         scheduleRuleRepository.findAllByScheduleIdAndActiveTrue(schedule.getId())
                                                 .stream()
                                                 .map(rule -> new GetScheduleRuleResponse(
+                                                        rule.getId(),
                                                         rule.getDayOfWeek(),
                                                         rule.getStartTime(),
                                                         rule.getEndTime()

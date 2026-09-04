@@ -80,6 +80,7 @@ class ScheduleServiceTest {
         UUID tenantId = UUID.randomUUID();
         UUID siteId = UUID.randomUUID();
         UUID scheduleId = UUID.randomUUID();
+        UUID scheduleRuleId = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.of(2026, 9, 1, 9, 0);
         LocalDateTime updatedAt = LocalDateTime.of(2026, 9, 2, 10, 0);
         Site site = mock(Site.class);
@@ -99,6 +100,7 @@ class ScheduleServiceTest {
         when(schedule.getCreatedAt()).thenReturn(createdAt);
         when(schedule.getUpdatedAt()).thenReturn(updatedAt);
         when(scheduleRuleRepository.findAllByScheduleIdAndActiveTrue(scheduleId)).thenReturn(List.of(rule));
+        when(rule.getId()).thenReturn(scheduleRuleId);
         when(rule.getDayOfWeek()).thenReturn(DayOfWeek.MONDAY);
         when(rule.getStartTime()).thenReturn(LocalTime.of(9, 0));
         when(rule.getEndTime()).thenReturn(LocalTime.of(17, 0));
@@ -114,10 +116,13 @@ class ScheduleServiceTest {
                 () -> assertEquals("London", siteResponse.city()),
                 () -> assertEquals("SW1A 1AA", siteResponse.postcode()),
                 () -> assertEquals(1, siteResponse.schedules().size()),
+                () -> assertEquals(scheduleId, siteResponse.schedules().getFirst().scheduleID()),
                 () -> assertEquals("Weekdays", siteResponse.schedules().getFirst().name()),
                 () -> assertEquals(createdAt, siteResponse.schedules().getFirst().createdAt()),
                 () -> assertEquals(updatedAt, siteResponse.schedules().getFirst().updatedAt()),
                 () -> assertEquals(1, siteResponse.schedules().getFirst().scheduleRules().size()),
+                () -> assertEquals(scheduleRuleId,
+                        siteResponse.schedules().getFirst().scheduleRules().getFirst().scheduleRuleID()),
                 () -> assertEquals(DayOfWeek.MONDAY,
                         siteResponse.schedules().getFirst().scheduleRules().getFirst().dayOfWeek()),
                 () -> assertEquals(LocalTime.of(9, 0),
