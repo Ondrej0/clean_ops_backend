@@ -3,6 +3,7 @@ package com.example.backend_clean_ops.controller;
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
+import com.example.backend_clean_ops.dto.responses.GetCleanerDataResponse;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -30,9 +31,11 @@ public class CleanerController {
     public GetCleanersResponse getCleaners(@RequestParam UUID tenantId){
         return userService.getCleaners(tenantId);
     }
-//TODO finish this method and finish teh response object too -- GetCleanerDataResponse
-//    @GetMapping("/{userId")
-//    @ResponseStatus(HttpStatus.OK)
-//    public
+
+    @GetMapping("/{cleanerId}")
+    @ResponseStatus(HttpStatus.OK)
+    public GetCleanerDataResponse getCleanerData(@PathVariable UUID cleanerId) {
+        return userService.getCleanerData(cleanerId);
+    }
 
 }

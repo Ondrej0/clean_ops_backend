@@ -3,6 +3,7 @@ package com.example.backend_clean_ops.controller;
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
+import com.example.backend_clean_ops.dto.responses.GetCleanerDataResponse;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,6 +89,20 @@ class CleanerControllerTest {
 
         assertSame(expectedResponse, actualResponse);
         verify(userService).getCleaners(tenantId);
+        verifyNoMoreInteractions(userService);
+    }
+
+    @Test
+    @DisplayName("Should delegate cleaner detail retrieval to the user service")
+    void getCleanerData_shouldReturnServiceResponse() {
+        UUID cleanerId = UUID.randomUUID();
+        GetCleanerDataResponse expectedResponse = mock(GetCleanerDataResponse.class);
+        when(userService.getCleanerData(cleanerId)).thenReturn(expectedResponse);
+
+        GetCleanerDataResponse actualResponse = cleanerController.getCleanerData(cleanerId);
+
+        assertSame(expectedResponse, actualResponse);
+        verify(userService).getCleanerData(cleanerId);
         verifyNoMoreInteractions(userService);
     }
 }

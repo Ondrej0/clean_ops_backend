@@ -4,10 +4,10 @@ import com.example.backend_clean_ops.enums.UserRole;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 
-//TODO Finish this, add aasigend sites, total hours worked, assigned shceduels, how late they are etc
 public record GetCleanerDataResponse(
         UUID id,
         String firstName,
@@ -18,6 +18,8 @@ public record GetCleanerDataResponse(
         BigDecimal payRate,
         boolean active,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        List<AssignedScheduleResponse> assignedSchedules,
+        List<AssignedSiteResponse> assignedSites
 ) {
 }

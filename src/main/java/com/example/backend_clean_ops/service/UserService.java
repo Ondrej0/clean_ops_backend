@@ -3,17 +3,24 @@ package com.example.backend_clean_ops.service;
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
 import com.example.backend_clean_ops.dto.responses.CleanerResponse;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
+import com.example.backend_clean_ops.dto.responses.AssignedScheduleResponse;
+import com.example.backend_clean_ops.dto.responses.AssignedSiteResponse;
+import com.example.backend_clean_ops.dto.responses.GetCleanerDataResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
+import com.example.backend_clean_ops.entity.ScheduleAssignment;
 import com.example.backend_clean_ops.entity.Tenant;
 import com.example.backend_clean_ops.entity.User;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.repository.TenantRepository;
+import com.example.backend_clean_ops.repository.ScheduleAssignmentRepository;
 import com.example.backend_clean_ops.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 // Creates tenant-scoped users and returns a compact creation response.
@@ -23,6 +30,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
+    private final ScheduleAssignmentRepository scheduleAssignmentRepository;
 
     public CreateUserResponse createUser(CreateUserRequest request, UserRole userRole) {
         User user = new User();
@@ -61,5 +69,44 @@ public class UserService {
         }
 
         return new GetCleanersResponse(cleanerResponses);
+    }
+
+    public GetCleanerDataResponse getCleanerData(UUID cleanerId) {
+        User cleaner = userRepository.findById(cleanerId)
+                .filter(user -> user.getRole() == UserRole.CLEANER)
+                .orElseThrow(() -> new RuntimeException("Cleaner not found"));
+
+        List<ScheduleAssignment> assignments = scheduleAssignmentRepository
+                .findByUserIdWithScheduleAndSite(cleanerId);
+        List<AssignedScheduleResponse> assignedSchedules = assignments.stream()
+                .map(ScheduleAssignment::getSchedule)
+                .map(schedule -> new AssignedScheduleResponse(schedule.getId(), schedule.getName()))
+                .toList();
+
+        Map<UUID, AssignedSiteResponse> assignedSitesById = new LinkedHashMap<>();
+        for (ScheduleAssignment assignment : assignments) {
+            var site = assignment.getSchedule().getSite();
+            assignedSitesById.putIfAbsent(site.getId(), new AssignedSiteResponse(
+                    site.getId(),
+                    site.getName(),
+                    site.getAddressLine1(),
+                    site.getPostcode()
+            ));
+        }
+
+        return new GetCleanerDataResponse(
+                cleaner.getId(),
+                cleaner.getFirstName(),
+                cleaner.getLastName(),
+                cleaner.getEmail(),
+                cleaner.getPhone(),
+                cleaner.getRole(),
+                cleaner.getPayRate(),
+                cleaner.isActive(),
+                cleaner.getCreatedAt(),
+                cleaner.getUpdatedAt(),
+                assignedSchedules,
+                List.copyOf(assignedSitesById.values())
+        );
     }
 }
