@@ -3,11 +3,13 @@ package com.example.backend_clean_ops.controller;
 import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
 import com.example.backend_clean_ops.dto.request.EditScheduleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetSchedulesBySitesResponse;
 import com.example.backend_clean_ops.service.ScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 // Exposes schedule creation and cleaner-assignment endpoints.
@@ -35,6 +37,13 @@ public class ScheduleController {
     public void assignCleanerToSchedule(@RequestParam UUID tenantId, @RequestParam UUID scheduleId, @RequestParam UUID cleanerId) {
         scheduleService.assignCleanerToSchedule(tenantId, scheduleId, cleanerId);
     }
+
+    @GetMapping("/by-site")
+    @ResponseStatus(HttpStatus.OK)
+    public List<GetSchedulesBySitesResponse> getSchedulesBySites(@RequestParam UUID tenantID){
+        return scheduleService.getSchedulesBySites(tenantID);
+    }
+
 
     //TODO DeactivateShedule
     //TODO Unassign Cleaner

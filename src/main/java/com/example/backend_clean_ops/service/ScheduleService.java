@@ -4,6 +4,9 @@ import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
 import com.example.backend_clean_ops.dto.request.EditScheduleRequest;
 import com.example.backend_clean_ops.dto.request.ScheduleRuleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetScheduleResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetScheduleRuleResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetSchedulesBySitesResponse;
 import com.example.backend_clean_ops.entity.Schedule;
 import com.example.backend_clean_ops.entity.ScheduleAssignment;
 import com.example.backend_clean_ops.entity.ScheduleRule;
@@ -12,6 +15,7 @@ import com.example.backend_clean_ops.entity.Site;
 import com.example.backend_clean_ops.entity.Tenant;
 import com.example.backend_clean_ops.entity.User;
 import com.example.backend_clean_ops.enums.ShiftStatus;
+import com.example.backend_clean_ops.enums.SiteStatus;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.repository.*;
 import jakarta.transaction.Transactional;
@@ -39,6 +43,35 @@ public class ScheduleService {
     private final TenantRepository tenantRepository;
     private final SiteRepository siteRepository;
     private final ShiftRepository shiftRepository;
+
+    public List<GetSchedulesBySitesResponse> getSchedulesBySites(UUID tenantID) {
+        return siteRepository.findAllByTenantIdAndStatus(tenantID, SiteStatus.ACTIVE)
+                .stream()
+                .map(site -> new GetSchedulesBySitesResponse(
+                        site.getId(),
+                        site.getName(),
+                        site.getAddressLine1(),
+                        site.getCity(),
+                        site.getPostcode(),
+                        scheduleRepository.findAllBySiteIdAndActiveTrue(site.getId())
+                                .stream()
+                                .map(schedule -> new GetScheduleResponse(
+                                        schedule.getName(),
+                                        schedule.getCreatedAt(),
+                                        schedule.getUpdatedAt(),
+                                        scheduleRuleRepository.findAllByScheduleIdAndActiveTrue(schedule.getId())
+                                                .stream()
+                                                .map(rule -> new GetScheduleRuleResponse(
+                                                        rule.getDayOfWeek(),
+                                                        rule.getStartTime(),
+                                                        rule.getEndTime()
+                                                ))
+                                                .toList()
+                                ))
+                                .toList()
+                ))
+                .toList();
+    }
 
     public CreateScheduleResponse createAndAssignSchedule(CreateScheduleRequest request) {
         // Persist the schedule first so rules and generated shifts can reference it.

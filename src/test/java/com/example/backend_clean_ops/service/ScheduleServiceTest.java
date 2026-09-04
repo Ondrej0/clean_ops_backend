@@ -4,6 +4,7 @@ import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
 import com.example.backend_clean_ops.dto.request.EditScheduleRequest;
 import com.example.backend_clean_ops.dto.request.ScheduleRuleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetSchedulesBySitesResponse;
 import com.example.backend_clean_ops.entity.Schedule;
 import com.example.backend_clean_ops.entity.ScheduleAssignment;
 import com.example.backend_clean_ops.entity.ScheduleRule;
@@ -13,6 +14,7 @@ import com.example.backend_clean_ops.entity.Tenant;
 import com.example.backend_clean_ops.entity.User;
 import com.example.backend_clean_ops.enums.DayOfWeek;
 import com.example.backend_clean_ops.enums.ShiftStatus;
+import com.example.backend_clean_ops.enums.SiteStatus;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +72,63 @@ class ScheduleServiceTest {
                 siteRepository,
                 shiftRepository
         );
+    }
+
+    @Test
+    @DisplayName("Should return active sites with only their active schedules and rules")
+    void getSchedulesBySites_shouldMapActiveHierarchy() {
+        UUID tenantId = UUID.randomUUID();
+        UUID siteId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.of(2026, 9, 1, 9, 0);
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 9, 2, 10, 0);
+        Site site = mock(Site.class);
+        Schedule schedule = mock(Schedule.class);
+        ScheduleRule rule = mock(ScheduleRule.class);
+
+        when(siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE))
+                .thenReturn(List.of(site));
+        when(site.getId()).thenReturn(siteId);
+        when(site.getName()).thenReturn("Central Office");
+        when(site.getAddressLine1()).thenReturn("1 High Street");
+        when(site.getCity()).thenReturn("London");
+        when(site.getPostcode()).thenReturn("SW1A 1AA");
+        when(scheduleRepository.findAllBySiteIdAndActiveTrue(siteId)).thenReturn(List.of(schedule));
+        when(schedule.getId()).thenReturn(scheduleId);
+        when(schedule.getName()).thenReturn("Weekdays");
+        when(schedule.getCreatedAt()).thenReturn(createdAt);
+        when(schedule.getUpdatedAt()).thenReturn(updatedAt);
+        when(scheduleRuleRepository.findAllByScheduleIdAndActiveTrue(scheduleId)).thenReturn(List.of(rule));
+        when(rule.getDayOfWeek()).thenReturn(DayOfWeek.MONDAY);
+        when(rule.getStartTime()).thenReturn(LocalTime.of(9, 0));
+        when(rule.getEndTime()).thenReturn(LocalTime.of(17, 0));
+
+        List<GetSchedulesBySitesResponse> response = scheduleService.getSchedulesBySites(tenantId);
+
+        assertEquals(1, response.size());
+        GetSchedulesBySitesResponse siteResponse = response.getFirst();
+        assertAll(
+                () -> assertEquals(siteId, siteResponse.siteID()),
+                () -> assertEquals("Central Office", siteResponse.siteName()),
+                () -> assertEquals("1 High Street", siteResponse.addressLine1()),
+                () -> assertEquals("London", siteResponse.city()),
+                () -> assertEquals("SW1A 1AA", siteResponse.postcode()),
+                () -> assertEquals(1, siteResponse.schedules().size()),
+                () -> assertEquals("Weekdays", siteResponse.schedules().getFirst().name()),
+                () -> assertEquals(createdAt, siteResponse.schedules().getFirst().createdAt()),
+                () -> assertEquals(updatedAt, siteResponse.schedules().getFirst().updatedAt()),
+                () -> assertEquals(1, siteResponse.schedules().getFirst().scheduleRules().size()),
+                () -> assertEquals(DayOfWeek.MONDAY,
+                        siteResponse.schedules().getFirst().scheduleRules().getFirst().dayOfWeek()),
+                () -> assertEquals(LocalTime.of(9, 0),
+                        siteResponse.schedules().getFirst().scheduleRules().getFirst().startTime()),
+                () -> assertEquals(LocalTime.of(17, 0),
+                        siteResponse.schedules().getFirst().scheduleRules().getFirst().endTime())
+        );
+
+        verify(siteRepository).findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
+        verify(scheduleRepository).findAllBySiteIdAndActiveTrue(siteId);
+        verify(scheduleRuleRepository).findAllByScheduleIdAndActiveTrue(scheduleId);
     }
 
     @Test
