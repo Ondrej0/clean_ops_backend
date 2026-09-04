@@ -44,8 +44,8 @@ public class ScheduleService {
     private final SiteRepository siteRepository;
     private final ShiftRepository shiftRepository;
 
-    public List<GetSchedulesBySitesResponse> getSchedulesBySites(UUID tenantID) {
-        return siteRepository.findAllByTenantIdAndStatus(tenantID, SiteStatus.ACTIVE)
+    public List<GetSchedulesBySitesResponse> getSchedulesBySites(UUID tenantId) {
+        return siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE)
                 .stream()
                 .map(site -> new GetSchedulesBySitesResponse(
                         site.getId(),
@@ -76,9 +76,9 @@ public class ScheduleService {
     public CreateScheduleResponse createAndAssignSchedule(CreateScheduleRequest request) {
         // Persist the schedule first so rules and generated shifts can reference it.
         Schedule schedule = new Schedule();
-        Tenant tenant = tenantRepository.findById(request.tenantID())
+        Tenant tenant = tenantRepository.findById(request.tenantId())
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
-        Site site = siteRepository.findById(request.siteID())
+        Site site = siteRepository.findById(request.siteId())
                 .orElseThrow(() -> new RuntimeException("Site not found"));
 
         schedule.setTenant(tenant);
@@ -120,7 +120,7 @@ public class ScheduleService {
     }
     @Transactional
     public void editSchedule(EditScheduleRequest request) {
-        Schedule schedule = scheduleRepository.findById(request.scheduleID())
+        Schedule schedule = scheduleRepository.findById(request.scheduleId())
                 .orElseThrow(() -> new RuntimeException("Schedule not found"));
 
         schedule.setName(request.name());

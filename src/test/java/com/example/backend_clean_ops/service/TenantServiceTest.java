@@ -54,7 +54,7 @@ class TenantServiceTest {
         CreateTenantResponse response = tenantService.createTenant(request);
 
         assertAll(
-                () -> assertEquals(tenantId, response.tenantID()),
+                () -> assertEquals(tenantId, response.tenantId()),
                 () -> assertEquals("Clean Ops Ltd", response.name()),
                 () -> assertEquals(createdAt, response.createdAt())
         );

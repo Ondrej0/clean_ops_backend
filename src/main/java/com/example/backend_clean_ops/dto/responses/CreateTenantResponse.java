@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record CreateTenantResponse(
-        UUID tenantID,
+        UUID tenantId,
         String name,
         LocalDateTime createdAt
 ) {

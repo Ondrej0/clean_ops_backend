@@ -25,7 +25,7 @@ public class SiteService {
 
     public CreateSiteResponse createSite(CreateSiteRequest request) {
         Site site = new Site();
-        Tenant tenant = tenantRepository.findById(request.tenantID())
+        Tenant tenant = tenantRepository.findById(request.tenantId())
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
         site.setTenant(tenant);
@@ -43,9 +43,9 @@ public class SiteService {
         );
     }
 
-    public GetSitesResponse getSites(UUID tenantID) {
+    public GetSitesResponse getSites(UUID tenantId) {
 
-        List<Site> sites = siteRepository.findAllByTenantId(tenantID);
+        List<Site> sites = siteRepository.findAllByTenantId(tenantId);
 
         List<SiteResponse> siteResponses = new ArrayList<>();
 

@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record CreateUserResponse(
-        UUID userID,
+        UUID userId,
         String firstName,
         String lastName,
         LocalDateTime createdAt

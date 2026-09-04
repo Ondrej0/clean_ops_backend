@@ -26,7 +26,7 @@ public class UserService {
 
     public CreateUserResponse createUser(CreateUserRequest request, UserRole userRole) {
         User user = new User();
-        Tenant tenant =  tenantRepository.findById(request.tenantID())
+        Tenant tenant =  tenantRepository.findById(request.tenantId())
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
         user.setTenant(tenant);
@@ -47,8 +47,8 @@ public class UserService {
         );
     }
 
-    public GetCleanersResponse getCleaners(UUID tenantID){
-        List<User> cleaners = userRepository.findAllByTenantIdAndRole(tenantID, UserRole.CLEANER);
+    public GetCleanersResponse getCleaners(UUID tenantId){
+        List<User> cleaners = userRepository.findAllByTenantIdAndRole(tenantId, UserRole.CLEANER);
 
         List<CleanerResponse> cleanerResponses = new ArrayList<>();
 

@@ -35,16 +35,16 @@ public class AttendanceService {
     @Transactional
     public AttendanceResponse clockIn(AttendanceRequest request) {
 
-        Shift shift = shiftRepository.findById(request.shiftID())
+        Shift shift = shiftRepository.findById(request.shiftId())
                 .orElseThrow(() -> new RuntimeException("Shift ID not found."));
 
-        Tenant tenant = tenantRepository.findById(request.tenantID())
+        Tenant tenant = tenantRepository.findById(request.tenantId())
                 .orElseThrow(() -> new RuntimeException("Tenant ID not found."));
 
-        User user = userRepository.findById(request.userID())
+        User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new RuntimeException("User ID not found."));
 
-        Site site = siteRepository.findById(request.siteID())
+        Site site = siteRepository.findById(request.siteId())
                 .orElseThrow(() -> new RuntimeException("Site ID not found."));
 
         if (!shift.getTenant().getId().equals(tenant.getId())) {
@@ -70,16 +70,16 @@ public class AttendanceService {
     @Transactional
     public AttendanceResponse clockOut(AttendanceRequest request) {
 
-        Shift shift = shiftRepository.findById(request.shiftID())
+        Shift shift = shiftRepository.findById(request.shiftId())
                 .orElseThrow(() -> new RuntimeException("Shift ID not found."));
 
-        Tenant tenant = tenantRepository.findById(request.tenantID())
+        Tenant tenant = tenantRepository.findById(request.tenantId())
                 .orElseThrow(() -> new RuntimeException("Tenant ID not found."));
 
-        User user = userRepository.findById(request.userID())
+        User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new RuntimeException("User ID not found."));
 
-        Site site = siteRepository.findById(request.siteID())
+        Site site = siteRepository.findById(request.siteId())
                 .orElseThrow(() -> new RuntimeException("Site ID not found."));
 
         if (!shift.getTenant().getId().equals(tenant.getId())) {

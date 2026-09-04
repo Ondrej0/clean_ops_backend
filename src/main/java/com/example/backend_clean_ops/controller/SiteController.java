@@ -26,7 +26,7 @@ public class SiteController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public GetSitesResponse getSite(@RequestParam UUID tenantID){
-        return siteService.getSites(tenantID);
+    public GetSitesResponse getSite(@RequestParam UUID tenantId){
+        return siteService.getSites(tenantId);
     }
 }

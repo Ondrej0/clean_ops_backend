@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.UUID;
 
 public record EditScheduleRequest(
-    UUID tenantID,
-    UUID scheduleID,
+    UUID tenantId,
+    UUID scheduleId,
     String name,
     List<ScheduleRuleRequest> scheduleRule
 ) {}

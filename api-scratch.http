@@ -19,7 +19,7 @@ POST {{baseUrl}}/api/sites
 Content-Type: application/json
 
 {
-  "tenantID": "e9a0e768-4d60-443c-b6c8-d761ef26061e",
+  "tenantId": "e9a0e768-4d60-443c-b6c8-d761ef26061e",
   "name": "Test London HQ",
   "addressLine1": "1 Test Road",
   "city": "Testcity",
@@ -27,7 +27,7 @@ Content-Type: application/json
 }
 
 ### Get Sites by Tenant ID
-GET {{baseUrl}}/api/sites?tenantID=e9a0e768-4d60-443c-b6c8-d761ef26061e
+GET {{baseUrl}}/api/sites?tenantId=e9a0e768-4d60-443c-b6c8-d761ef26061e
 Content-Type: application/json
 
 ### Create a cleaner user
@@ -35,7 +35,7 @@ POST {{baseUrl}}/api/cleaner
 Content-Type: application/json
 
 {
-  "tenantID": "e9a0e768-4d60-443c-b6c8-d761ef26061e",
+  "tenantId": "e9a0e768-4d60-443c-b6c8-d761ef26061e",
   "firstName": "Jamie",
   "lastName": "Taylor",
   "passwordHash": "change-me",
@@ -44,15 +44,15 @@ Content-Type: application/json
 }
 
 ### Get cleaners
-GET {{baseUrl}}/api/cleaner?tenantID=e9a0e768-4d60-443c-b6c8-d761ef26061e
+GET {{baseUrl}}/api/cleaner?tenantId=e9a0e768-4d60-443c-b6c8-d761ef26061e
 
 ### Create a schedule
 POST {{baseUrl}}/api/schedules
 Content-Type: application/json
 
 {
-  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
-  "siteID": "3019ed9c-025f-439f-a512-9c732f16e0e6",
+  "tenantId": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "siteId": "3019ed9c-025f-439f-a512-9c732f16e0e6",
   "name": "Weekday Morning",
   "scheduleRule": [
     {
@@ -73,8 +73,8 @@ POST {{baseUrl}}/api/schedules/edit
 Content-Type: application/json
 
 {
-  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
-  "scheduleID": "7f558ad7-e9e5-4a3d-997d-d39ffbc431ea",
+  "tenantId": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "scheduleId": "7f558ad7-e9e5-4a3d-997d-d39ffbc431ea",
   "name": "Weekday Morning Updated",
   "scheduleRule": [
     {
@@ -93,10 +93,10 @@ POST {{baseUrl}}/api/attendance/clockIn
 Content-Type: application/json
 
 {
-  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
-  "siteID": "3019ed9c-025f-439f-a512-9c732f16e0e6",
-  "shiftID": "69b71f7c-4ad7-4391-8758-d85ecabf1de5",
-  "userID": "6cd3c765-b1e8-4d50-b60f-fef5ba006155",
+  "tenantId": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "siteId": "3019ed9c-025f-439f-a512-9c732f16e0e6",
+  "shiftId": "69b71f7c-4ad7-4391-8758-d85ecabf1de5",
+  "userId": "6cd3c765-b1e8-4d50-b60f-fef5ba006155",
   "clockedIn": "2026-08-02T09:00:00"
 }
 
@@ -105,9 +105,9 @@ POST {{baseUrl}}/api/attendance/clockOut
 Content-Type: application/json
 
 {
-  "tenantID": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
-  "siteID": "3019ed9c-025f-439f-a512-9c732f16e0e6",
-  "shiftID": "69b71f7c-4ad7-4391-8758-d85ecabf1de5",
-  "userID": "6cd3c765-b1e8-4d50-b60f-fef5ba006155",
+  "tenantId": "fa0f2c4b-0bdc-4f89-9735-9956b2b7b73d",
+  "siteId": "3019ed9c-025f-439f-a512-9c732f16e0e6",
+  "shiftId": "69b71f7c-4ad7-4391-8758-d85ecabf1de5",
+  "userId": "6cd3c765-b1e8-4d50-b60f-fef5ba006155",
   "clockedIn": "2026-08-02T12:00:00"
 }

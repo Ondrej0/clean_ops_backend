@@ -108,7 +108,7 @@ class ScheduleServiceTest {
         assertEquals(1, response.size());
         GetSchedulesBySitesResponse siteResponse = response.getFirst();
         assertAll(
-                () -> assertEquals(siteId, siteResponse.siteID()),
+                () -> assertEquals(siteId, siteResponse.siteId()),
                 () -> assertEquals("Central Office", siteResponse.siteName()),
                 () -> assertEquals("1 High Street", siteResponse.addressLine1()),
                 () -> assertEquals("London", siteResponse.city()),
@@ -170,8 +170,8 @@ class ScheduleServiceTest {
         CreateScheduleResponse response = scheduleService.createAndAssignSchedule(request);
 
         assertAll(
-                () -> assertEquals(scheduleId, response.ScheduleID()),
-                () -> assertEquals(createdSiteId, response.SiteID()),
+                () -> assertEquals(scheduleId, response.scheduleId()),
+                () -> assertEquals(createdSiteId, response.siteId()),
                 () -> assertEquals(createdAt, response.createdAt())
         );
 

@@ -68,7 +68,7 @@ class UserServiceTest {
         CreateUserResponse response = userService.createUser(request, UserRole.CLEANER);
 
         assertAll(
-                () -> assertEquals(userId, response.userID()),
+                () -> assertEquals(userId, response.userId()),
                 () -> assertEquals("Jane", response.firstName()),
                 () -> assertEquals("Doe", response.lastName()),
                 () -> assertEquals(createdAt, response.createdAt())

@@ -95,7 +95,7 @@ class AttendanceServiceTest {
     @DisplayName("Should reject clock in when shift cannot be found")
     void clockIn_whenShiftMissing_shouldThrowException() {
         AttendanceRequest request = request();
-        when(shiftRepository.findById(request.shiftID())).thenReturn(Optional.empty());
+        when(shiftRepository.findById(request.shiftId())).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
@@ -103,7 +103,7 @@ class AttendanceServiceTest {
         );
 
         assertEquals("Shift ID not found.", exception.getMessage());
-        verify(shiftRepository).findById(request.shiftID());
+        verify(shiftRepository).findById(request.shiftId());
         verifyNoInteractions(tenantRepository, userRepository, siteRepository);
         verifyNoMoreInteractions(shiftRepository);
     }
@@ -114,9 +114,9 @@ class AttendanceServiceTest {
         AttendanceRequest request = request();
         Shift shift = mock(Shift.class);
         Tenant tenant = mock(Tenant.class);
-        when(shiftRepository.findById(request.shiftID())).thenReturn(Optional.of(shift));
-        when(tenantRepository.findById(request.tenantID())).thenReturn(Optional.of(tenant));
-        when(userRepository.findById(request.userID())).thenReturn(Optional.empty());
+        when(shiftRepository.findById(request.shiftId())).thenReturn(Optional.of(shift));
+        when(tenantRepository.findById(request.tenantId())).thenReturn(Optional.of(tenant));
+        when(userRepository.findById(request.userId())).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
@@ -124,9 +124,9 @@ class AttendanceServiceTest {
         );
 
         assertEquals("User ID not found.", exception.getMessage());
-        verify(shiftRepository).findById(request.shiftID());
-        verify(tenantRepository).findById(request.tenantID());
-        verify(userRepository).findById(request.userID());
+        verify(shiftRepository).findById(request.shiftId());
+        verify(tenantRepository).findById(request.tenantId());
+        verify(userRepository).findById(request.userId());
         verifyNoInteractions(siteRepository);
         verify(shiftRepository, never()).save(shift);
         verifyNoMoreInteractions(shiftRepository, tenantRepository, userRepository);
@@ -191,16 +191,16 @@ class AttendanceServiceTest {
         shift.setUser(shiftUser);
         shift.setSite(shiftSite);
 
-        when(shiftRepository.findById(request.shiftID())).thenReturn(Optional.of(shift));
-        when(tenantRepository.findById(request.tenantID())).thenReturn(Optional.of(requestedTenant));
-        when(userRepository.findById(request.userID())).thenReturn(Optional.of(requestedUser));
-        when(siteRepository.findById(request.siteID())).thenReturn(Optional.of(requestedSite));
-        lenient().when(requestedTenant.getId()).thenReturn(request.tenantID());
-        lenient().when(shiftTenant.getId()).thenReturn(request.tenantID());
-        lenient().when(requestedUser.getId()).thenReturn(request.userID());
-        lenient().when(shiftUser.getId()).thenReturn(request.userID());
-        lenient().when(requestedSite.getId()).thenReturn(request.siteID());
-        lenient().when(shiftSite.getId()).thenReturn(request.siteID());
+        when(shiftRepository.findById(request.shiftId())).thenReturn(Optional.of(shift));
+        when(tenantRepository.findById(request.tenantId())).thenReturn(Optional.of(requestedTenant));
+        when(userRepository.findById(request.userId())).thenReturn(Optional.of(requestedUser));
+        when(siteRepository.findById(request.siteId())).thenReturn(Optional.of(requestedSite));
+        lenient().when(requestedTenant.getId()).thenReturn(request.tenantId());
+        lenient().when(shiftTenant.getId()).thenReturn(request.tenantId());
+        lenient().when(requestedUser.getId()).thenReturn(request.userId());
+        lenient().when(shiftUser.getId()).thenReturn(request.userId());
+        lenient().when(requestedSite.getId()).thenReturn(request.siteId());
+        lenient().when(shiftSite.getId()).thenReturn(request.siteId());
 
         return new TestData(request, shift, shiftTenant, shiftUser, shiftSite, request.clockedIn());
     }
@@ -216,10 +216,10 @@ class AttendanceServiceTest {
     }
 
     private void verifyLookupsAndSave(TestData data) {
-        verify(shiftRepository).findById(data.request().shiftID());
-        verify(tenantRepository).findById(data.request().tenantID());
-        verify(userRepository).findById(data.request().userID());
-        verify(siteRepository).findById(data.request().siteID());
+        verify(shiftRepository).findById(data.request().shiftId());
+        verify(tenantRepository).findById(data.request().tenantId());
+        verify(userRepository).findById(data.request().userId());
+        verify(siteRepository).findById(data.request().siteId());
         verify(shiftRepository).save(data.shift());
     }
 

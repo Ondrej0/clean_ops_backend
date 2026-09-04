@@ -4,8 +4,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record CreateScheduleResponse(
-        UUID ScheduleID,
-        UUID SiteID,
+        UUID scheduleId,
+        UUID siteId,
         LocalDateTime createdAt
 ) {
 }

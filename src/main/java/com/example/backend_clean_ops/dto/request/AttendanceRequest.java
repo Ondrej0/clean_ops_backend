@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record AttendanceRequest(
-        UUID tenantID,
-        UUID siteID,
-        UUID shiftID,
-        UUID userID,
+        UUID tenantId,
+        UUID siteId,
+        UUID shiftId,
+        UUID userId,
         LocalDateTime clockedIn
 ) {}

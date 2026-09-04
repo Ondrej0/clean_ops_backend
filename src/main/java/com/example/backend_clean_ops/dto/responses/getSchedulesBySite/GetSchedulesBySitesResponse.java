@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record GetSchedulesBySitesResponse(
-        UUID siteID,
+        UUID siteId,
         String siteName,
         String addressLine1,
         String city,
