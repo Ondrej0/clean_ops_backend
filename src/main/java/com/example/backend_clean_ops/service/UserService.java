@@ -48,7 +48,7 @@ public class UserService {
     }
 
     public GetCleanersResponse getCleaners(UUID tenantId){
-        List<User> cleaners = userRepository.findAllByTenantIdAndRole(tenantId, UserRole.CLEANER);
+        List<User> cleaners = userRepository.findAllByTenantIdAndRoleAndActiveTrue(tenantId, UserRole.CLEANER);
 
         List<CleanerResponse> cleanerResponses = new ArrayList<>();
 

@@ -6,6 +6,7 @@ import com.example.backend_clean_ops.dto.responses.GetSitesResponse;
 import com.example.backend_clean_ops.dto.responses.SiteResponse;
 import com.example.backend_clean_ops.entity.Site;
 import com.example.backend_clean_ops.entity.Tenant;
+import com.example.backend_clean_ops.enums.SiteStatus;
 import com.example.backend_clean_ops.repository.SiteRepository;
 import com.example.backend_clean_ops.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,7 @@ public class SiteService {
 
     public GetSitesResponse getSites(UUID tenantId) {
 
-        List<Site> sites = siteRepository.findAllByTenantId(tenantId);
+        List<Site> sites = siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
 
         List<SiteResponse> siteResponses = new ArrayList<>();
 

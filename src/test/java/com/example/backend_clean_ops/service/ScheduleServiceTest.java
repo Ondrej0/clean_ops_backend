@@ -90,13 +90,14 @@ class ScheduleServiceTest {
         ScheduleAssignment assignment = mock(ScheduleAssignment.class);
         User cleaner = mock(User.class);
 
-        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+        when(scheduleRepository.findByIdAndActiveTrue(scheduleId)).thenReturn(Optional.of(schedule));
         when(schedule.getId()).thenReturn(scheduleId);
         when(schedule.getName()).thenReturn("Weekdays");
         when(schedule.getCreatedAt()).thenReturn(createdAt);
         when(schedule.getUpdatedAt()).thenReturn(updatedAt);
         when(schedule.getSite()).thenReturn(site);
         when(site.getId()).thenReturn(siteId);
+        when(siteRepository.findByIdAndStatus(siteId, SiteStatus.ACTIVE)).thenReturn(Optional.of(site));
         when(site.getName()).thenReturn("Central Office");
         when(site.getPostcode()).thenReturn("SW1A 1AA");
         when(scheduleRuleRepository.findAllByScheduleIdAndActiveTrue(scheduleId)).thenReturn(List.of(rule));
@@ -109,6 +110,7 @@ class ScheduleServiceTest {
         when(cleaner.getId()).thenReturn(cleanerId);
         when(cleaner.getFirstName()).thenReturn("Alex");
         when(cleaner.getLastName()).thenReturn("Smith");
+        when(cleaner.isActive()).thenReturn(true);
 
         GetScheduleByIdResponse response = scheduleService.getSchedule(scheduleId);
 
@@ -131,17 +133,18 @@ class ScheduleServiceTest {
                 () -> assertEquals("Smith", response.assignedCleaners().getFirst().lastName())
         );
 
-        verify(scheduleRepository).findById(scheduleId);
+        verify(scheduleRepository).findByIdAndActiveTrue(scheduleId);
+        verify(siteRepository).findByIdAndStatus(siteId, SiteStatus.ACTIVE);
         verify(scheduleRuleRepository).findAllByScheduleIdAndActiveTrue(scheduleId);
         verify(scheduleAssignmentRepository).findByScheduleId(scheduleId);
-        verifyNoMoreInteractions(scheduleRepository, scheduleRuleRepository, scheduleAssignmentRepository);
+        verifyNoMoreInteractions(scheduleRepository, scheduleRuleRepository, scheduleAssignmentRepository, siteRepository);
     }
 
     @Test
     @DisplayName("Should throw an exception when the schedule cannot be found")
     void getSchedule_whenScheduleDoesNotExist_shouldThrowException() {
         UUID scheduleId = UUID.randomUUID();
-        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.empty());
+        when(scheduleRepository.findByIdAndActiveTrue(scheduleId)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
@@ -149,7 +152,7 @@ class ScheduleServiceTest {
         );
 
         assertEquals("Schedule not found", exception.getMessage());
-        verify(scheduleRepository).findById(scheduleId);
+        verify(scheduleRepository).findByIdAndActiveTrue(scheduleId);
         verifyNoInteractions(scheduleRuleRepository);
         verifyNoInteractions(scheduleAssignmentRepository);
         verifyNoMoreInteractions(scheduleRepository);

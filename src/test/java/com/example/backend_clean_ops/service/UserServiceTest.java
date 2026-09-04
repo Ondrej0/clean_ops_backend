@@ -127,7 +127,7 @@ class UserServiceTest {
         User firstCleaner = mock(User.class);
         User secondCleaner = mock(User.class);
 
-        when(userRepository.findAllByTenantIdAndRole(tenantId, UserRole.CLEANER))
+        when(userRepository.findAllByTenantIdAndRoleAndActiveTrue(tenantId, UserRole.CLEANER))
                 .thenReturn(List.of(firstCleaner, secondCleaner));
         when(firstCleaner.getId()).thenReturn(firstCleanerId);
         when(firstCleaner.getFirstName()).thenReturn("Jane");
@@ -147,7 +147,7 @@ class UserServiceTest {
                 new CleanerResponse(secondCleanerId, "John", "Smith", "john@example.com", "07987654321")
         ), response.cleaners());
 
-        verify(userRepository).findAllByTenantIdAndRole(tenantId, UserRole.CLEANER);
+        verify(userRepository).findAllByTenantIdAndRoleAndActiveTrue(tenantId, UserRole.CLEANER);
         verifyNoInteractions(tenantRepository);
         verifyNoMoreInteractions(userRepository);
     }
@@ -156,12 +156,12 @@ class UserServiceTest {
     @DisplayName("Should return an empty list when tenant has no cleaners")
     void getCleaners_whenNoCleanersExist_shouldReturnEmptyResponse() {
         UUID tenantId = UUID.randomUUID();
-        when(userRepository.findAllByTenantIdAndRole(tenantId, UserRole.CLEANER)).thenReturn(List.of());
+        when(userRepository.findAllByTenantIdAndRoleAndActiveTrue(tenantId, UserRole.CLEANER)).thenReturn(List.of());
 
         GetCleanersResponse response = userService.getCleaners(tenantId);
 
         assertTrue(response.cleaners().isEmpty());
-        verify(userRepository).findAllByTenantIdAndRole(tenantId, UserRole.CLEANER);
+        verify(userRepository).findAllByTenantIdAndRoleAndActiveTrue(tenantId, UserRole.CLEANER);
         verifyNoInteractions(tenantRepository);
         verifyNoMoreInteractions(userRepository);
     }

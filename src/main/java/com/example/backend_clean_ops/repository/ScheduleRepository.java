@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, UUID> {
     List<Schedule> findAllBySiteIdAndActiveTrue(UUID siteId);
+
+    java.util.Optional<Schedule> findByIdAndActiveTrue(UUID id);
 }

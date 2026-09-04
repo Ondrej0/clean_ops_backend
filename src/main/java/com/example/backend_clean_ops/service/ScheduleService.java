@@ -49,8 +49,11 @@ public class ScheduleService {
     private final ShiftRepository shiftRepository;
 
     public GetScheduleByIdResponse getSchedule(UUID scheduleId) {
-        Schedule schedule = scheduleRepository.findById(scheduleId)
+        Schedule schedule = scheduleRepository.findByIdAndActiveTrue(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Schedule not found"));
+
+        Site activeSite = siteRepository.findByIdAndStatus(schedule.getSite().getId(), SiteStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException("Site not found"));
 
         return new GetScheduleByIdResponse(
                 schedule.getId(),
@@ -58,9 +61,9 @@ public class ScheduleService {
                 schedule.getCreatedAt(),
                 schedule.getUpdatedAt(),
                 new ScheduleSiteResponse(
-                        schedule.getSite().getId(),
-                        schedule.getSite().getName(),
-                        schedule.getSite().getPostcode()
+                        activeSite.getId(),
+                        activeSite.getName(),
+                        activeSite.getPostcode()
                 ),
                 scheduleRuleRepository.findAllByScheduleIdAndActiveTrue(scheduleId)
                         .stream()
@@ -73,6 +76,7 @@ public class ScheduleService {
                         .toList(),
                 scheduleAssignmentRepository.findByScheduleId(scheduleId)
                         .stream()
+                        .filter(assignment -> assignment.getUser().isActive())
                         .map(assignment -> new AssignedCleanerResponse(
                                 assignment.getUser().getId(),
                                 assignment.getUser().getFirstName(),

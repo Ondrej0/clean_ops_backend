@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findAllByTenantIdAndRole(UUID tenantId, UserRole role);
+
+    List<User> findAllByTenantIdAndRoleAndActiveTrue(UUID tenantId, UserRole role);
 }

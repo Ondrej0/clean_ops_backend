@@ -118,32 +118,22 @@ class SiteServiceTest {
     void getSites_whenSitesExist_shouldReturnMappedSiteResponses() {
         UUID tenantId = UUID.randomUUID();
         UUID firstSiteId = UUID.randomUUID();
-        UUID secondSiteId = UUID.randomUUID();
         Site firstSite = mock(Site.class);
-        Site secondSite = mock(Site.class);
 
-        when(siteRepository.findAllByTenantId(tenantId)).thenReturn(List.of(firstSite, secondSite));
+        when(siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE)).thenReturn(List.of(firstSite));
         when(firstSite.getId()).thenReturn(firstSiteId);
         when(firstSite.getName()).thenReturn("Central Depot");
         when(firstSite.getAddressLine1()).thenReturn("12 High Street");
         when(firstSite.getCity()).thenReturn("London");
         when(firstSite.getPostcode()).thenReturn("SW1A 1AA");
         when(firstSite.getStatus()).thenReturn(SiteStatus.ACTIVE);
-        when(secondSite.getId()).thenReturn(secondSiteId);
-        when(secondSite.getName()).thenReturn("North Office");
-        when(secondSite.getAddressLine1()).thenReturn("34 Station Road");
-        when(secondSite.getCity()).thenReturn("Manchester");
-        when(secondSite.getPostcode()).thenReturn("M1 1AE");
-        when(secondSite.getStatus()).thenReturn(SiteStatus.INACTIVE);
-
         GetSitesResponse response = siteService.getSites(tenantId);
 
         assertEquals(List.of(
-                new SiteResponse(firstSiteId, "Central Depot", "12 High Street", "London", "SW1A 1AA", SiteStatus.ACTIVE),
-                new SiteResponse(secondSiteId, "North Office", "34 Station Road", "Manchester", "M1 1AE", SiteStatus.INACTIVE)
+                new SiteResponse(firstSiteId, "Central Depot", "12 High Street", "London", "SW1A 1AA", SiteStatus.ACTIVE)
         ), response.Sites());
 
-        verify(siteRepository).findAllByTenantId(tenantId);
+        verify(siteRepository).findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
         verifyNoInteractions(tenantRepository);
         verifyNoMoreInteractions(siteRepository);
     }
@@ -152,13 +142,13 @@ class SiteServiceTest {
     @DisplayName("Should return an empty site list when tenant has no sites")
     void getSites_whenNoSitesExist_shouldReturnEmptySiteResponses() {
         UUID tenantId = UUID.randomUUID();
-        when(siteRepository.findAllByTenantId(tenantId)).thenReturn(List.of());
+        when(siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE)).thenReturn(List.of());
 
         GetSitesResponse response = siteService.getSites(tenantId);
 
         assertTrue(response.Sites().isEmpty());
 
-        verify(siteRepository).findAllByTenantId(tenantId);
+        verify(siteRepository).findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
         verifyNoInteractions(tenantRepository);
         verifyNoMoreInteractions(siteRepository);
     }
