@@ -4,6 +4,10 @@ import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
 import com.example.backend_clean_ops.dto.request.EditScheduleRequest;
 import com.example.backend_clean_ops.dto.request.ScheduleRuleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedule.AssignedCleanerResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedule.GetScheduleByIdResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedule.ScheduleRuleDetailsResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedule.ScheduleSiteResponse;
 import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetScheduleResponse;
 import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetScheduleRuleResponse;
 import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetSchedulesBySitesResponse;
@@ -43,6 +47,40 @@ public class ScheduleService {
     private final TenantRepository tenantRepository;
     private final SiteRepository siteRepository;
     private final ShiftRepository shiftRepository;
+
+    public GetScheduleByIdResponse getSchedule(UUID scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+
+        return new GetScheduleByIdResponse(
+                schedule.getId(),
+                schedule.getName(),
+                schedule.getCreatedAt(),
+                schedule.getUpdatedAt(),
+                new ScheduleSiteResponse(
+                        schedule.getSite().getId(),
+                        schedule.getSite().getName(),
+                        schedule.getSite().getPostcode()
+                ),
+                scheduleRuleRepository.findAllByScheduleIdAndActiveTrue(scheduleId)
+                        .stream()
+                        .map(rule -> new ScheduleRuleDetailsResponse(
+                                rule.getId(),
+                                rule.getDayOfWeek(),
+                                rule.getStartTime(),
+                                rule.getEndTime()
+                        ))
+                        .toList(),
+                scheduleAssignmentRepository.findByScheduleId(scheduleId)
+                        .stream()
+                        .map(assignment -> new AssignedCleanerResponse(
+                                assignment.getUser().getId(),
+                                assignment.getUser().getFirstName(),
+                                assignment.getUser().getLastName()
+                        ))
+                        .toList()
+        );
+    }
 
     public List<GetSchedulesBySitesResponse> getSchedulesBySites(UUID tenantId) {
         return siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE)

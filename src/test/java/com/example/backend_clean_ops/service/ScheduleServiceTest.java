@@ -4,6 +4,7 @@ import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
 import com.example.backend_clean_ops.dto.request.EditScheduleRequest;
 import com.example.backend_clean_ops.dto.request.ScheduleRuleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedule.GetScheduleByIdResponse;
 import com.example.backend_clean_ops.dto.responses.getSchedulesBySite.GetSchedulesBySitesResponse;
 import com.example.backend_clean_ops.entity.Schedule;
 import com.example.backend_clean_ops.entity.ScheduleAssignment;
@@ -72,6 +73,86 @@ class ScheduleServiceTest {
                 siteRepository,
                 shiftRepository
         );
+    }
+
+    @Test
+    @DisplayName("Should return a schedule with its site, active rules, and assigned cleaners")
+    void getSchedule_whenScheduleExists_shouldMapScheduleDetails() {
+        UUID scheduleId = UUID.randomUUID();
+        UUID scheduleRuleId = UUID.randomUUID();
+        UUID siteId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.of(2026, 9, 1, 9, 0);
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 9, 2, 10, 0);
+        Schedule schedule = mock(Schedule.class);
+        ScheduleRule rule = mock(ScheduleRule.class);
+        Site site = mock(Site.class);
+        ScheduleAssignment assignment = mock(ScheduleAssignment.class);
+        User cleaner = mock(User.class);
+
+        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+        when(schedule.getId()).thenReturn(scheduleId);
+        when(schedule.getName()).thenReturn("Weekdays");
+        when(schedule.getCreatedAt()).thenReturn(createdAt);
+        when(schedule.getUpdatedAt()).thenReturn(updatedAt);
+        when(schedule.getSite()).thenReturn(site);
+        when(site.getId()).thenReturn(siteId);
+        when(site.getName()).thenReturn("Central Office");
+        when(site.getPostcode()).thenReturn("SW1A 1AA");
+        when(scheduleRuleRepository.findAllByScheduleIdAndActiveTrue(scheduleId)).thenReturn(List.of(rule));
+        when(rule.getId()).thenReturn(scheduleRuleId);
+        when(rule.getDayOfWeek()).thenReturn(DayOfWeek.MONDAY);
+        when(rule.getStartTime()).thenReturn(LocalTime.of(9, 0));
+        when(rule.getEndTime()).thenReturn(LocalTime.of(17, 0));
+        when(scheduleAssignmentRepository.findByScheduleId(scheduleId)).thenReturn(List.of(assignment));
+        when(assignment.getUser()).thenReturn(cleaner);
+        when(cleaner.getId()).thenReturn(cleanerId);
+        when(cleaner.getFirstName()).thenReturn("Alex");
+        when(cleaner.getLastName()).thenReturn("Smith");
+
+        GetScheduleByIdResponse response = scheduleService.getSchedule(scheduleId);
+
+        assertAll(
+                () -> assertEquals(scheduleId, response.scheduleId()),
+                () -> assertEquals("Weekdays", response.name()),
+                () -> assertEquals(createdAt, response.createdAt()),
+                () -> assertEquals(updatedAt, response.updatedAt()),
+                () -> assertEquals(siteId, response.site().siteId()),
+                () -> assertEquals("Central Office", response.site().name()),
+                () -> assertEquals("SW1A 1AA", response.site().postcode()),
+                () -> assertEquals(1, response.scheduleRules().size()),
+                () -> assertEquals(scheduleRuleId, response.scheduleRules().getFirst().scheduleRuleId()),
+                () -> assertEquals(DayOfWeek.MONDAY, response.scheduleRules().getFirst().dayOfWeek()),
+                () -> assertEquals(LocalTime.of(9, 0), response.scheduleRules().getFirst().startTime()),
+                () -> assertEquals(LocalTime.of(17, 0), response.scheduleRules().getFirst().endTime()),
+                () -> assertEquals(1, response.assignedCleaners().size()),
+                () -> assertEquals(cleanerId, response.assignedCleaners().getFirst().cleanerId()),
+                () -> assertEquals("Alex", response.assignedCleaners().getFirst().firstName()),
+                () -> assertEquals("Smith", response.assignedCleaners().getFirst().lastName())
+        );
+
+        verify(scheduleRepository).findById(scheduleId);
+        verify(scheduleRuleRepository).findAllByScheduleIdAndActiveTrue(scheduleId);
+        verify(scheduleAssignmentRepository).findByScheduleId(scheduleId);
+        verifyNoMoreInteractions(scheduleRepository, scheduleRuleRepository, scheduleAssignmentRepository);
+    }
+
+    @Test
+    @DisplayName("Should throw an exception when the schedule cannot be found")
+    void getSchedule_whenScheduleDoesNotExist_shouldThrowException() {
+        UUID scheduleId = UUID.randomUUID();
+        when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> scheduleService.getSchedule(scheduleId)
+        );
+
+        assertEquals("Schedule not found", exception.getMessage());
+        verify(scheduleRepository).findById(scheduleId);
+        verifyNoInteractions(scheduleRuleRepository);
+        verifyNoInteractions(scheduleAssignmentRepository);
+        verifyNoMoreInteractions(scheduleRepository);
     }
 
     @Test

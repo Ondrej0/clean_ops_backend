@@ -2,6 +2,7 @@ package com.example.backend_clean_ops.controller;
 
 import com.example.backend_clean_ops.dto.request.CreateScheduleRequest;
 import com.example.backend_clean_ops.dto.responses.CreateScheduleResponse;
+import com.example.backend_clean_ops.dto.responses.getSchedule.GetScheduleByIdResponse;
 import com.example.backend_clean_ops.service.ScheduleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +28,39 @@ class ScheduleControllerTest {
     @BeforeEach
     void setUp() {
         scheduleController = new ScheduleController(scheduleService);
+    }
+
+    @Test
+    @DisplayName("Should delegate schedule retrieval to schedule service and return response")
+    void getSchedule_shouldCallScheduleService_andReturnResponse() {
+        UUID scheduleId = UUID.randomUUID();
+        GetScheduleByIdResponse expectedResponse = mock(GetScheduleByIdResponse.class);
+
+        when(scheduleService.getSchedule(scheduleId)).thenReturn(expectedResponse);
+
+        GetScheduleByIdResponse actualResponse = scheduleController.getSchedule(scheduleId);
+
+        assertSame(expectedResponse, actualResponse);
+        verify(scheduleService).getSchedule(scheduleId);
+        verifyNoMoreInteractions(scheduleService);
+    }
+
+    @Test
+    @DisplayName("Should propagate exception when schedule retrieval fails")
+    void getSchedule_whenScheduleServiceThrows_shouldPropagateException() {
+        UUID scheduleId = UUID.randomUUID();
+        RuntimeException exception = new RuntimeException("Schedule not found");
+
+        when(scheduleService.getSchedule(scheduleId)).thenThrow(exception);
+
+        RuntimeException thrownException = assertThrows(
+                RuntimeException.class,
+                () -> scheduleController.getSchedule(scheduleId)
+        );
+
+        assertSame(exception, thrownException);
+        verify(scheduleService).getSchedule(scheduleId);
+        verifyNoMoreInteractions(scheduleService);
     }
 
     @Test
