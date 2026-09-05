@@ -4,9 +4,17 @@ import com.example.backend_clean_ops.dto.request.CreateSiteRequest;
 import com.example.backend_clean_ops.dto.responses.CreateSiteResponse;
 import com.example.backend_clean_ops.dto.responses.GetSitesResponse;
 import com.example.backend_clean_ops.dto.responses.SiteResponse;
+import com.example.backend_clean_ops.dto.responses.getSite.GetSiteByIdResponse;
+import com.example.backend_clean_ops.dto.responses.getSite.SiteCleanerSummaryResponse;
+import com.example.backend_clean_ops.dto.responses.getSite.SiteScheduleSummaryResponse;
 import com.example.backend_clean_ops.entity.Site;
+import com.example.backend_clean_ops.entity.Schedule;
+import com.example.backend_clean_ops.entity.ScheduleAssignment;
 import com.example.backend_clean_ops.entity.Tenant;
+import com.example.backend_clean_ops.entity.User;
 import com.example.backend_clean_ops.enums.SiteStatus;
+import com.example.backend_clean_ops.repository.ScheduleAssignmentRepository;
+import com.example.backend_clean_ops.repository.ScheduleRepository;
 import com.example.backend_clean_ops.repository.SiteRepository;
 import com.example.backend_clean_ops.repository.TenantRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,11 +43,22 @@ class SiteServiceTest {
     @Mock
     private TenantRepository tenantRepository;
 
+    @Mock
+    private ScheduleRepository scheduleRepository;
+
+    @Mock
+    private ScheduleAssignmentRepository scheduleAssignmentRepository;
+
     private SiteService siteService;
 
     @BeforeEach
     void setUp() {
-        siteService = new SiteService(siteRepository, tenantRepository);
+        siteService = new SiteService(
+                siteRepository,
+                tenantRepository,
+                scheduleRepository,
+                scheduleAssignmentRepository
+        );
     }
 
     @Test
@@ -151,5 +171,92 @@ class SiteServiceTest {
         verify(siteRepository).findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
         verifyNoInteractions(tenantRepository);
         verifyNoMoreInteractions(siteRepository);
+    }
+
+    @Test
+    @DisplayName("Should return active site details with schedules and unique cleaners derived from schedule assignments")
+    void getSiteById_whenSiteExists_shouldMapDetailsSchedulesAndScheduleAssignedCleaners() {
+        UUID siteId = UUID.randomUUID();
+        UUID firstScheduleId = UUID.randomUUID();
+        UUID secondScheduleId = UUID.randomUUID();
+        UUID cleanerId = UUID.randomUUID();
+        UUID secondCleanerId = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 1, 9, 0);
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 8, 2, 10, 0);
+        Site site = mock(Site.class);
+        Schedule firstSchedule = mock(Schedule.class);
+        Schedule secondSchedule = mock(Schedule.class);
+        ScheduleAssignment firstAssignment = mock(ScheduleAssignment.class);
+        ScheduleAssignment duplicateCleanerAssignment = mock(ScheduleAssignment.class);
+        ScheduleAssignment secondAssignment = mock(ScheduleAssignment.class);
+        User firstCleaner = mock(User.class);
+        User secondCleaner = mock(User.class);
+
+        when(siteRepository.findByIdAndStatus(siteId, SiteStatus.ACTIVE)).thenReturn(Optional.of(site));
+        when(scheduleRepository.findAllBySiteIdAndActiveTrue(siteId))
+                .thenReturn(List.of(firstSchedule, secondSchedule));
+        when(scheduleAssignmentRepository.findBySiteIdWithActiveScheduleAndActiveUser(siteId))
+                .thenReturn(List.of(firstAssignment, duplicateCleanerAssignment, secondAssignment));
+
+        when(site.getId()).thenReturn(siteId);
+        when(site.getName()).thenReturn("Central Depot");
+        when(site.getAddressLine1()).thenReturn("12 High Street");
+        when(site.getAddressLine2()).thenReturn("Suite 4");
+        when(site.getCity()).thenReturn("London");
+        when(site.getPostcode()).thenReturn("SW1A 1AA");
+        when(site.getContactName()).thenReturn("Pat Smith");
+        when(site.getContactPhone()).thenReturn("07123 456789");
+        when(site.getContactEmail()).thenReturn("pat@example.com");
+        when(site.getStatus()).thenReturn(SiteStatus.ACTIVE);
+        when(site.getHourlyRate()).thenReturn(new BigDecimal("24.50"));
+        when(site.getCreatedAt()).thenReturn(createdAt);
+        when(site.getUpdatedAt()).thenReturn(updatedAt);
+        when(firstSchedule.getId()).thenReturn(firstScheduleId);
+        when(firstSchedule.getName()).thenReturn("Weekday mornings");
+        when(secondSchedule.getId()).thenReturn(secondScheduleId);
+        when(secondSchedule.getName()).thenReturn("Weekend cover");
+        when(firstAssignment.getUser()).thenReturn(firstCleaner);
+        when(duplicateCleanerAssignment.getUser()).thenReturn(firstCleaner);
+        when(secondAssignment.getUser()).thenReturn(secondCleaner);
+        when(firstCleaner.getId()).thenReturn(cleanerId);
+        when(firstCleaner.getFirstName()).thenReturn("Alex");
+        when(firstCleaner.getLastName()).thenReturn("Jones");
+        when(secondCleaner.getId()).thenReturn(secondCleanerId);
+        when(secondCleaner.getFirstName()).thenReturn("Sam");
+        when(secondCleaner.getLastName()).thenReturn("Lee");
+
+        GetSiteByIdResponse response = siteService.getSiteById(siteId);
+
+        assertAll(
+                () -> assertEquals(siteId, response.siteId()),
+                () -> assertEquals("Suite 4", response.addressLine2()),
+                () -> assertEquals(createdAt, response.createdAt()),
+                () -> assertEquals(updatedAt, response.updatedAt()),
+                () -> assertEquals(List.of(
+                        new SiteScheduleSummaryResponse(firstScheduleId, "Weekday mornings"),
+                        new SiteScheduleSummaryResponse(secondScheduleId, "Weekend cover")
+                ), response.assignedSchedules()),
+                () -> assertEquals(List.of(
+                        new SiteCleanerSummaryResponse(cleanerId, "Alex", "Jones"),
+                        new SiteCleanerSummaryResponse(secondCleanerId, "Sam", "Lee")
+                ), response.assignedCleaners())
+        );
+
+        verify(siteRepository).findByIdAndStatus(siteId, SiteStatus.ACTIVE);
+        verify(scheduleRepository).findAllBySiteIdAndActiveTrue(siteId);
+        verify(scheduleAssignmentRepository).findBySiteIdWithActiveScheduleAndActiveUser(siteId);
+    }
+
+    @Test
+    @DisplayName("Should throw when the requested site is not active or does not exist")
+    void getSiteById_whenSiteMissing_shouldThrowException() {
+        UUID siteId = UUID.randomUUID();
+        when(siteRepository.findByIdAndStatus(siteId, SiteStatus.ACTIVE)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> siteService.getSiteById(siteId));
+
+        assertEquals("Site not found", exception.getMessage());
+        verify(siteRepository).findByIdAndStatus(siteId, SiteStatus.ACTIVE);
+        verifyNoInteractions(scheduleRepository, scheduleAssignmentRepository);
     }
 }

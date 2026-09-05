@@ -3,6 +3,7 @@ package com.example.backend_clean_ops.controller;
 import com.example.backend_clean_ops.dto.request.CreateSiteRequest;
 import com.example.backend_clean_ops.dto.responses.CreateSiteResponse;
 import com.example.backend_clean_ops.dto.responses.GetSitesResponse;
+import com.example.backend_clean_ops.dto.responses.getSite.GetSiteByIdResponse;
 import com.example.backend_clean_ops.service.SiteService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -97,6 +98,20 @@ class SiteControllerTest {
         assertSame(exception, thrownException);
 
         verify(siteService).getSites(tenantId);
+        verifyNoMoreInteractions(siteService);
+    }
+
+    @Test
+    @DisplayName("Should delegate site-detail retrieval to the site service")
+    void getSiteById_shouldReturnServiceResponse() {
+        UUID siteId = UUID.randomUUID();
+        GetSiteByIdResponse expectedResponse = mock(GetSiteByIdResponse.class);
+        when(siteService.getSiteById(siteId)).thenReturn(expectedResponse);
+
+        GetSiteByIdResponse actualResponse = siteController.getSiteById(siteId);
+
+        assertSame(expectedResponse, actualResponse);
+        verify(siteService).getSiteById(siteId);
         verifyNoMoreInteractions(siteService);
     }
 }

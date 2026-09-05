@@ -66,7 +66,7 @@ class UserServiceTest {
                 "Doe",
                 "hashed-password",
                 "jane@example.com",
-                19.50f
+                new BigDecimal("19.50")
         );
 
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
@@ -112,7 +112,7 @@ class UserServiceTest {
                 "Doe",
                 "hashed-password",
                 "jane@example.com",
-                19.50f
+                new BigDecimal("19.50")
         );
 
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.empty());
