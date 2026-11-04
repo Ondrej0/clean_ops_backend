@@ -21,6 +21,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +33,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -133,44 +137,59 @@ class SiteServiceTest {
         verifyNoMoreInteractions(tenantRepository);
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("siteFilters")
     @DisplayName("Should return sites mapped into site responses for tenant")
-    void getSites_whenSitesExist_shouldReturnMappedSiteResponses() {
+    void getSites_whenSitesExist_shouldReturnMappedSiteResponses(UUID userId, SiteStatus status) {
         UUID tenantId = UUID.randomUUID();
         UUID firstSiteId = UUID.randomUUID();
         Site firstSite = mock(Site.class);
 
-        when(siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE)).thenReturn(List.of(firstSite));
+        SiteStatus returnedStatus = status == null ? SiteStatus.INACTIVE : status;
+        when(siteRepository.findByFilters(tenantId, userId, status)).thenReturn(List.of(firstSite));
         when(firstSite.getId()).thenReturn(firstSiteId);
         when(firstSite.getName()).thenReturn("Central Depot");
         when(firstSite.getAddressLine1()).thenReturn("12 High Street");
         when(firstSite.getCity()).thenReturn("London");
         when(firstSite.getPostcode()).thenReturn("SW1A 1AA");
-        when(firstSite.getStatus()).thenReturn(SiteStatus.ACTIVE);
-        GetSitesResponse response = siteService.getSites(tenantId);
+        when(firstSite.getStatus()).thenReturn(returnedStatus);
+        GetSitesResponse response = siteService.getSites(tenantId, userId, status);
 
         assertEquals(List.of(
-                new SiteResponse(firstSiteId, "Central Depot", "12 High Street", "London", "SW1A 1AA", SiteStatus.ACTIVE)
+                new SiteResponse(firstSiteId, "Central Depot", "12 High Street", "London", "SW1A 1AA", returnedStatus)
         ), response.Sites());
 
-        verify(siteRepository).findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
+        verify(siteRepository).findByFilters(tenantId, userId, status);
         verifyNoInteractions(tenantRepository);
         verifyNoMoreInteractions(siteRepository);
     }
 
-    @Test
-    @DisplayName("Should return an empty site list when tenant has no sites")
-    void getSites_whenNoSitesExist_shouldReturnEmptySiteResponses() {
+    @ParameterizedTest
+    @MethodSource("siteFilters")
+    @DisplayName("Should return an empty site list when no sites match the filters")
+    void getSites_whenNoSitesMatch_shouldReturnEmptySiteResponses(UUID userId, SiteStatus status) {
         UUID tenantId = UUID.randomUUID();
-        when(siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE)).thenReturn(List.of());
+        when(siteRepository.findByFilters(tenantId, userId, status)).thenReturn(List.of());
 
-        GetSitesResponse response = siteService.getSites(tenantId);
+        GetSitesResponse response = siteService.getSites(tenantId, userId, status);
 
         assertTrue(response.Sites().isEmpty());
 
-        verify(siteRepository).findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
+        verify(siteRepository).findByFilters(tenantId, userId, status);
         verifyNoInteractions(tenantRepository);
         verifyNoMoreInteractions(siteRepository);
+    }
+
+    private static Stream<Arguments> siteFilters() {
+        UUID userId = UUID.randomUUID();
+        return Stream.of(
+                Arguments.of(null, null),
+                Arguments.of(null, SiteStatus.ACTIVE),
+                Arguments.of(null, SiteStatus.INACTIVE),
+                Arguments.of(userId, null),
+                Arguments.of(userId, SiteStatus.ACTIVE),
+                Arguments.of(userId, SiteStatus.INACTIVE)
+        );
     }
 
     @Test

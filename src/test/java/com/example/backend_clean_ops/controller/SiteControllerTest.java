@@ -4,15 +4,20 @@ import com.example.backend_clean_ops.dto.request.CreateSiteRequest;
 import com.example.backend_clean_ops.dto.responses.CreateSiteResponse;
 import com.example.backend_clean_ops.dto.responses.GetSitesResponse;
 import com.example.backend_clean_ops.dto.responses.getSite.GetSiteByIdResponse;
+import com.example.backend_clean_ops.enums.SiteStatus;
 import com.example.backend_clean_ops.service.SiteService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -66,19 +71,20 @@ class SiteControllerTest {
         verifyNoMoreInteractions(siteService);
     }
 
-    @Test
-    @DisplayName("Should delegate site retrieval to site service and return response")
-    void getSite_shouldCallSiteService_andReturnResponse() {
+    @ParameterizedTest
+    @MethodSource("siteFilters")
+    @DisplayName("Should pass optional site filters to the service and return its response")
+    void getSites_shouldPassFiltersToSiteService_andReturnResponse(UUID userId, SiteStatus status) {
         UUID tenantId = UUID.randomUUID();
         GetSitesResponse expectedResponse = mock(GetSitesResponse.class);
 
-        when(siteService.getSites(tenantId)).thenReturn(expectedResponse);
+        when(siteService.getSites(tenantId, userId, status)).thenReturn(expectedResponse);
 
-        GetSitesResponse actualResponse = siteController.getSites(tenantId);
+        GetSitesResponse actualResponse = siteController.getSites(tenantId, userId, status);
 
         assertSame(expectedResponse, actualResponse);
 
-        verify(siteService).getSites(tenantId);
+        verify(siteService).getSites(tenantId, userId, status);
         verifyNoMoreInteractions(siteService);
     }
 
@@ -88,16 +94,16 @@ class SiteControllerTest {
         UUID tenantId = UUID.randomUUID();
         RuntimeException exception = new RuntimeException("Unable to retrieve sites");
 
-        when(siteService.getSites(tenantId)).thenThrow(exception);
+        when(siteService.getSites(tenantId, null, null)).thenThrow(exception);
 
         RuntimeException thrownException = assertThrows(
                 RuntimeException.class,
-                () -> siteController.getSites(tenantId)
+                () -> siteController.getSites(tenantId, null, null)
         );
 
         assertSame(exception, thrownException);
 
-        verify(siteService).getSites(tenantId);
+        verify(siteService).getSites(tenantId, null, null);
         verifyNoMoreInteractions(siteService);
     }
 
@@ -113,5 +119,17 @@ class SiteControllerTest {
         assertSame(expectedResponse, actualResponse);
         verify(siteService).getSiteById(siteId);
         verifyNoMoreInteractions(siteService);
+    }
+
+    private static Stream<Arguments> siteFilters() {
+        UUID userId = UUID.randomUUID();
+        return Stream.of(
+                Arguments.of(null, null),
+                Arguments.of(null, SiteStatus.ACTIVE),
+                Arguments.of(null, SiteStatus.INACTIVE),
+                Arguments.of(userId, null),
+                Arguments.of(userId, SiteStatus.ACTIVE),
+                Arguments.of(userId, SiteStatus.INACTIVE)
+        );
     }
 }

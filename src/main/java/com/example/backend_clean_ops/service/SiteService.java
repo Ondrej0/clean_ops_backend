@@ -54,9 +54,9 @@ public class SiteService {
         );
     }
 
-    public GetSitesResponse getSites(UUID tenantId) {
+    public GetSitesResponse getSites(UUID tenantId, UUID userId, SiteStatus siteStatus) {
 
-        List<Site> sites = siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
+        List<Site> sites = siteRepository.findByFilters(tenantId, userId, siteStatus);
 
         List<SiteResponse> siteResponses = new ArrayList<>();
 

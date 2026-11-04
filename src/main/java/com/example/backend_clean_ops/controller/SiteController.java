@@ -29,11 +29,11 @@ public class SiteController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public GetSitesResponse getSites(
-            @RequestParam UUID tenantId
-//            @RequestParam(required = false) UUID userId,
-//            @RequestParam(required = false)SiteStatus status
+            @RequestParam UUID tenantId,
+            @RequestParam(required = false) UUID userId,
+            @RequestParam(required = false) SiteStatus status
             ){
-        return siteService.getSites(tenantId);
+        return siteService.getSites(tenantId, userId, status);
     }
 
     @GetMapping("/{siteId}")
