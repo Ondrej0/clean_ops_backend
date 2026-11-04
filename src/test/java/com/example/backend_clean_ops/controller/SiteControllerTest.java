@@ -74,7 +74,7 @@ class SiteControllerTest {
 
         when(siteService.getSites(tenantId)).thenReturn(expectedResponse);
 
-        GetSitesResponse actualResponse = siteController.getSite(tenantId);
+        GetSitesResponse actualResponse = siteController.getSites(tenantId);
 
         assertSame(expectedResponse, actualResponse);
 
@@ -92,7 +92,7 @@ class SiteControllerTest {
 
         RuntimeException thrownException = assertThrows(
                 RuntimeException.class,
-                () -> siteController.getSite(tenantId)
+                () -> siteController.getSites(tenantId)
         );
 
         assertSame(exception, thrownException);
