@@ -31,7 +31,7 @@ GET {{baseUrl}}/api/sites?tenantId=e9a0e768-4d60-443c-b6c8-d761ef26061e
 Content-Type: application/json
 
 ### Edit a site
-PUT {{baseUrl}}/api/sites/3019ed9c-025f-439f-a512-9c732f16e0e6
+PUT {{baseUrl}}/api/sites/534c8bf6-3616-44ca-923b-0f50edad47ce
 Content-Type: application/json
 
 {
