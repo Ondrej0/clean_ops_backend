@@ -30,6 +30,23 @@ Content-Type: application/json
 GET {{baseUrl}}/api/sites?tenantId=e9a0e768-4d60-443c-b6c8-d761ef26061e
 Content-Type: application/json
 
+### Edit a site
+PUT {{baseUrl}}/api/sites/3019ed9c-025f-439f-a512-9c732f16e0e6
+Content-Type: application/json
+
+{
+  "tenantId": "e9a0e768-4d60-443c-b6c8-d761ef26061e",
+  "name": "Test London HQ",
+  "addressLine1": "2 Test Road",
+  "addressLine2": "Suite 4",
+  "city": "Testcity",
+  "postcode": "EC1A TES",
+  "contactName": "Pat Smith",
+  "contactPhone": "07123 456789",
+  "contactEmail": "pat@example.com",
+  "hourlyRate": 24.50
+}
+
 ### Create a cleaner user
 POST {{baseUrl}}/api/cleaner
 Content-Type: application/json

@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.service;
 
 import com.example.backend_clean_ops.dto.request.CreateSiteRequest;
+import com.example.backend_clean_ops.dto.request.EditSiteRequest;
 import com.example.backend_clean_ops.dto.responses.CreateSiteResponse;
 import com.example.backend_clean_ops.dto.responses.GetSitesResponse;
 import com.example.backend_clean_ops.dto.responses.SiteResponse;
@@ -277,5 +278,92 @@ class SiteServiceTest {
         assertEquals("Site not found", exception.getMessage());
         verify(siteRepository).findByIdAndStatus(siteId, SiteStatus.ACTIVE);
         verifyNoInteractions(scheduleRepository, scheduleAssignmentRepository);
+    }
+
+    @Test
+    @DisplayName("Should update every editable site field when the site belongs to the request tenant")
+    void editSiteById_whenSiteBelongsToTenant_shouldUpdateAndSaveSite() {
+        UUID tenantId = UUID.randomUUID();
+        UUID siteId = UUID.randomUUID();
+        Tenant tenant = mock(Tenant.class);
+        Site site = mock(Site.class);
+        EditSiteRequest request = new EditSiteRequest(
+                tenantId,
+                "Central Depot",
+                "12 High Street",
+                "Suite 4",
+                "London",
+                "SW1A 1AA",
+                "Pat Smith",
+                "07123 456789",
+                "pat@example.com",
+                new BigDecimal("24.50")
+        );
+
+        when(siteRepository.findById(siteId)).thenReturn(Optional.of(site));
+        when(site.getTenant()).thenReturn(tenant);
+        when(tenant.getId()).thenReturn(tenantId);
+
+        siteService.editSiteById(siteId, request);
+
+        verify(siteRepository).findById(siteId);
+        verify(site).setName("Central Depot");
+        verify(site).setAddressLine1("12 High Street");
+        verify(site).setAddressLine2("Suite 4");
+        verify(site).setCity("London");
+        verify(site).setPostcode("SW1A 1AA");
+        verify(site).setContactName("Pat Smith");
+        verify(site).setContactPhone("07123 456789");
+        verify(site).setContactEmail("pat@example.com");
+        verify(site).setHourlyRate(new BigDecimal("24.50"));
+        verify(siteRepository).save(site);
+    }
+
+    @Test
+    @DisplayName("Should reject an edit for a site belonging to a different tenant")
+    void editSiteById_whenSiteBelongsToAnotherTenant_shouldThrowException() {
+        UUID requestTenantId = UUID.randomUUID();
+        UUID siteId = UUID.randomUUID();
+        Tenant siteTenant = mock(Tenant.class);
+        Site site = mock(Site.class);
+        EditSiteRequest request = new EditSiteRequest(
+                requestTenantId, "Central Depot", "12 High Street", null, "London", "SW1A 1AA",
+                null, null, null, null
+        );
+
+        when(siteRepository.findById(siteId)).thenReturn(Optional.of(site));
+        when(site.getTenant()).thenReturn(siteTenant);
+        when(siteTenant.getId()).thenReturn(UUID.randomUUID());
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> siteService.editSiteById(siteId, request)
+        );
+
+        assertEquals("Site does not belong to tenant", exception.getMessage());
+        verify(siteRepository).findById(siteId);
+        verify(siteRepository, never()).save(any());
+        verifyNoInteractions(scheduleRepository, scheduleAssignmentRepository);
+    }
+
+    @Test
+    @DisplayName("Should throw without saving when the requested site does not exist")
+    void editSiteById_whenSiteIsMissing_shouldThrowException() {
+        UUID siteId = UUID.randomUUID();
+        EditSiteRequest request = new EditSiteRequest(
+                UUID.randomUUID(), "Central Depot", "12 High Street", null, "London", "SW1A 1AA",
+                null, null, null, null
+        );
+        when(siteRepository.findById(siteId)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> siteService.editSiteById(siteId, request)
+        );
+
+        assertEquals("Site not found", exception.getMessage());
+        verify(siteRepository).findById(siteId);
+        verify(siteRepository, never()).save(any());
+        verifyNoInteractions(tenantRepository, scheduleRepository, scheduleAssignmentRepository);
     }
 }

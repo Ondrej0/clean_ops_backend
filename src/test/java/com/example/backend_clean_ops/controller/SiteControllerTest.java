@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.controller;
 
 import com.example.backend_clean_ops.dto.request.CreateSiteRequest;
+import com.example.backend_clean_ops.dto.request.EditSiteRequest;
 import com.example.backend_clean_ops.dto.responses.CreateSiteResponse;
 import com.example.backend_clean_ops.dto.responses.GetSitesResponse;
 import com.example.backend_clean_ops.dto.responses.getSite.GetSiteByIdResponse;
@@ -118,6 +119,18 @@ class SiteControllerTest {
 
         assertSame(expectedResponse, actualResponse);
         verify(siteService).getSiteById(siteId);
+        verifyNoMoreInteractions(siteService);
+    }
+
+    @Test
+    @DisplayName("Should delegate a site edit using the identifier from the URL")
+    void editSiteById_shouldPassPathSiteIdAndRequestToService() {
+        UUID siteId = UUID.randomUUID();
+        EditSiteRequest request = mock(EditSiteRequest.class);
+
+        siteController.editSiteById(siteId, request);
+
+        verify(siteService).editSiteById(siteId, request);
         verifyNoMoreInteractions(siteService);
     }
 

@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.service;
 
 import com.example.backend_clean_ops.dto.request.CreateSiteRequest;
+import com.example.backend_clean_ops.dto.request.EditSiteRequest;
 import com.example.backend_clean_ops.dto.responses.CreateSiteResponse;
 import com.example.backend_clean_ops.dto.responses.GetSitesResponse;
 import com.example.backend_clean_ops.dto.responses.SiteResponse;
@@ -15,6 +16,7 @@ import com.example.backend_clean_ops.repository.SiteRepository;
 import com.example.backend_clean_ops.repository.ScheduleAssignmentRepository;
 import com.example.backend_clean_ops.repository.ScheduleRepository;
 import com.example.backend_clean_ops.repository.TenantRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -73,6 +75,7 @@ public class SiteService {
     }
 
     public GetSiteByIdResponse getSiteById(UUID siteId) {
+        //TODO update this method to also take in a site status and not just default to active
         Site site = siteRepository.findByIdAndStatus(siteId, SiteStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("Site not found"));
 
@@ -112,5 +115,26 @@ public class SiteService {
                 assignedSchedules,
                 List.copyOf(assignedCleanersById.values())
         );
+    }
+    @Transactional
+    public void editSiteById(UUID siteId, EditSiteRequest request) {
+        Site site = siteRepository.findById(siteId)
+                .orElseThrow(() -> new RuntimeException("Site not found"));
+
+        if (!site.getTenant().getId().equals(request.tenantId())) {
+            throw new RuntimeException("Site does not belong to tenant");
+        }
+
+        site.setName(request.name());
+        site.setAddressLine1(request.addressLine1());
+        site.setAddressLine2(request.addressLine2());
+        site.setCity(request.city());
+        site.setPostcode(request.postcode());
+        site.setContactName(request.contactName());
+        site.setContactPhone(request.contactPhone());
+        site.setContactEmail(request.contactEmail());
+        site.setHourlyRate(request.hourlyRate());
+
+        siteRepository.save(site);
     }
 }
