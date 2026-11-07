@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
+    boolean existsByIdAndTenantId(UUID id, UUID tenantId);
     List<User> findAllByTenantIdAndRole(UUID tenantId, UserRole role);
 
     List<User> findAllByTenantIdAndRoleAndActiveTrue(UUID tenantId, UserRole role);

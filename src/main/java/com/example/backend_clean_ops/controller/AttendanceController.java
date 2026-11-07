@@ -4,6 +4,7 @@ import com.example.backend_clean_ops.dto.request.AttendanceRequest;
 import com.example.backend_clean_ops.dto.responses.AttendanceResponse;
 import com.example.backend_clean_ops.service.AttendanceService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,13 +18,13 @@ public class AttendanceController {
 
     @PostMapping("/clockIn")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public AttendanceResponse clockIn(@RequestBody AttendanceRequest request){
+    public AttendanceResponse clockIn(@Valid @RequestBody AttendanceRequest request){
         return attendanceService.clockIn(request);
     }
 
     @PostMapping("/clockOut")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public AttendanceResponse clockOut(@RequestBody AttendanceRequest request){
+    public AttendanceResponse clockOut(@Valid @RequestBody AttendanceRequest request){
         return attendanceService.clockOut(request);
     }
 

@@ -6,7 +6,6 @@ import com.example.backend_clean_ops.entity.Shift;
 import com.example.backend_clean_ops.entity.Site;
 import com.example.backend_clean_ops.entity.Tenant;
 import com.example.backend_clean_ops.entity.User;
-import com.example.backend_clean_ops.enums.CleanerShiftStatus;
 import com.example.backend_clean_ops.enums.ShiftStatus;
 import com.example.backend_clean_ops.repository.ShiftRepository;
 import com.example.backend_clean_ops.repository.SiteRepository;
@@ -18,9 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.time.Clock;
+import java.time.Instant;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
-// Placeholder for attendance-related business rules and clocking workflows.
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,35 +32,40 @@ public class AttendanceService {
     private final UserRepository userRepository;
     private final SiteRepository siteRepository;
 
-    //TODO Finish clock in and clock out flows
+    private final ShiftTimingPolicy timing;
+    private final Clock clock;
     @Transactional
     public AttendanceResponse clockIn(AttendanceRequest request) {
 
-        Shift shift = shiftRepository.findById(request.shiftId())
-                .orElseThrow(() -> new RuntimeException("Shift ID not found."));
+        Shift shift = shiftRepository.findForAttendance(request.shiftId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shift ID not found."));
 
         Tenant tenant = tenantRepository.findById(request.tenantId())
-                .orElseThrow(() -> new RuntimeException("Tenant ID not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant ID not found."));
 
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new RuntimeException("User ID not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User ID not found."));
 
         Site site = siteRepository.findById(request.siteId())
-                .orElseThrow(() -> new RuntimeException("Site ID not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site ID not found."));
 
         if (!shift.getTenant().getId().equals(tenant.getId())) {
-            throw new RuntimeException("Tenant does not match");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant does not match");
         }
 
         if (!shift.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("User does not match");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User does not match");
         }
 
         if (!shift.getSite().getId().equals(site.getId())) {
-            throw new RuntimeException("Site does not match");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Site does not match");
         }
 
-        shift.setActualStart(request.clockedIn());
+        Instant now = clock.instant();
+        if (!timing.canClockIn(shift, now)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Shift cannot be clocked in at this time or in its current state.");
+        }
+        shift.setActualStart(LocalDateTime.ofInstant(now, ShiftTimingPolicy.ZONE));
         shift.setStatus(ShiftStatus.IN_PROGRESS);
 
         shiftRepository.save(shift);
@@ -70,31 +76,38 @@ public class AttendanceService {
     @Transactional
     public AttendanceResponse clockOut(AttendanceRequest request) {
 
-        Shift shift = shiftRepository.findById(request.shiftId())
-                .orElseThrow(() -> new RuntimeException("Shift ID not found."));
+        Shift shift = shiftRepository.findForAttendance(request.shiftId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shift ID not found."));
 
         Tenant tenant = tenantRepository.findById(request.tenantId())
-                .orElseThrow(() -> new RuntimeException("Tenant ID not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant ID not found."));
 
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new RuntimeException("User ID not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User ID not found."));
 
         Site site = siteRepository.findById(request.siteId())
-                .orElseThrow(() -> new RuntimeException("Site ID not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Site ID not found."));
 
         if (!shift.getTenant().getId().equals(tenant.getId())) {
-            throw new RuntimeException("Tenant does not match");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant does not match");
         }
 
         if (!shift.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("User does not match");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User does not match");
         }
 
         if (!shift.getSite().getId().equals(site.getId())) {
-            throw new RuntimeException("Site does not match");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Site does not match");
         }
 
-        shift.setActualEnd(request.clockedIn());
+        Instant now = clock.instant();
+        if (!timing.canClockOut(shift, now)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    timing.requiresManagerCorrection(shift, now)
+                            ? "Clock-out deadline passed or attendance is inconsistent. A manager must correct this shift."
+                            : "Shift must be in progress with an existing clock-in and no clock-out.");
+        }
+        shift.setActualEnd(LocalDateTime.ofInstant(now, ShiftTimingPolicy.ZONE));
         shift.setStatus(ShiftStatus.COMPLETED);
 
         shiftRepository.save(shift);

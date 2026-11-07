@@ -1,12 +1,14 @@
 package com.example.backend_clean_ops.dto.request;
 
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 public record AttendanceRequest(
-        UUID tenantId,
-        UUID siteId,
-        UUID shiftId,
-        UUID userId,
+        @NotNull UUID tenantId,
+        @NotNull UUID siteId,
+        @NotNull UUID shiftId,
+        @NotNull UUID userId,
+        // Retained for client compatibility; attendance timestamps are set by the server.
         LocalDateTime clockedIn
 ) {}

@@ -19,6 +19,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,7 +58,9 @@ class AttendanceServiceTest {
                 shiftRepository,
                 tenantRepository,
                 userRepository,
-                siteRepository
+                siteRepository,
+                new ShiftTimingPolicy(),
+                Clock.fixed(Instant.parse("2026-07-27T08:30:00Z"), ZoneOffset.UTC)
         );
     }
 
@@ -79,11 +85,12 @@ class AttendanceServiceTest {
     void clockOut_whenRequestMatchesShift_shouldUpdateAndSaveShift() {
         TestData data = matchingTestData();
         data.shift().setStatus(ShiftStatus.IN_PROGRESS);
+        data.shift().setActualStart(data.clockedAt().minusHours(1));
 
         AttendanceResponse response = attendanceService.clockOut(data.request());
 
         assertAll(
-                () -> assertNull(data.shift().getActualStart()),
+                () -> assertEquals(data.clockedAt().minusHours(1), data.shift().getActualStart()),
                 () -> assertEquals(data.clockedAt(), data.shift().getActualEnd()),
                 () -> assertEquals(ShiftStatus.COMPLETED, data.shift().getStatus()),
                 () -> assertEquals(ShiftStatus.COMPLETED, response.shiftStatus())
@@ -95,15 +102,15 @@ class AttendanceServiceTest {
     @DisplayName("Should reject clock in when shift cannot be found")
     void clockIn_whenShiftMissing_shouldThrowException() {
         AttendanceRequest request = request();
-        when(shiftRepository.findById(request.shiftId())).thenReturn(Optional.empty());
+        when(shiftRepository.findForAttendance(request.shiftId())).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
                 () -> attendanceService.clockIn(request)
         );
 
-        assertEquals("Shift ID not found.", exception.getMessage());
-        verify(shiftRepository).findById(request.shiftId());
+        assertEquals("Shift ID not found.", ((ResponseStatusException) exception).getReason());
+        verify(shiftRepository).findForAttendance(request.shiftId());
         verifyNoInteractions(tenantRepository, userRepository, siteRepository);
         verifyNoMoreInteractions(shiftRepository);
     }
@@ -114,7 +121,7 @@ class AttendanceServiceTest {
         AttendanceRequest request = request();
         Shift shift = mock(Shift.class);
         Tenant tenant = mock(Tenant.class);
-        when(shiftRepository.findById(request.shiftId())).thenReturn(Optional.of(shift));
+        when(shiftRepository.findForAttendance(request.shiftId())).thenReturn(Optional.of(shift));
         when(tenantRepository.findById(request.tenantId())).thenReturn(Optional.of(tenant));
         when(userRepository.findById(request.userId())).thenReturn(Optional.empty());
 
@@ -123,8 +130,8 @@ class AttendanceServiceTest {
                 () -> attendanceService.clockOut(request)
         );
 
-        assertEquals("User ID not found.", exception.getMessage());
-        verify(shiftRepository).findById(request.shiftId());
+        assertEquals("User ID not found.", ((ResponseStatusException) exception).getReason());
+        verify(shiftRepository).findForAttendance(request.shiftId());
         verify(tenantRepository).findById(request.tenantId());
         verify(userRepository).findById(request.userId());
         verifyNoInteractions(siteRepository);
@@ -143,7 +150,7 @@ class AttendanceServiceTest {
                 () -> attendanceService.clockIn(data.request())
         );
 
-        assertEquals("Tenant does not match", exception.getMessage());
+        assertEquals("Tenant does not match", ((ResponseStatusException) exception).getReason());
         verify(shiftRepository, never()).save(data.shift());
     }
 
@@ -158,7 +165,7 @@ class AttendanceServiceTest {
                 () -> attendanceService.clockOut(data.request())
         );
 
-        assertEquals("User does not match", exception.getMessage());
+        assertEquals("User does not match", ((ResponseStatusException) exception).getReason());
         verify(shiftRepository, never()).save(data.shift());
     }
 
@@ -173,7 +180,51 @@ class AttendanceServiceTest {
                 () -> attendanceService.clockOut(data.request())
         );
 
-        assertEquals("Site does not match", exception.getMessage());
+        assertEquals("Site does not match", ((ResponseStatusException) exception).getReason());
+        verify(shiftRepository, never()).save(data.shift());
+    }
+
+    @Test
+    void clockIn_ignoresClientTimestampAndUsesServerTime() {
+        TestData data = matchingTestData();
+        AttendanceRequest forged = new AttendanceRequest(data.request().tenantId(), data.request().siteId(),
+                data.request().shiftId(), data.request().userId(), data.clockedAt().minusDays(1));
+        attendanceService.clockIn(forged);
+        assertEquals(data.clockedAt(), data.shift().getActualStart());
+    }
+
+    @Test
+    void clockIn_rejectsExpiredWindowDespiteBackdatedRequest() {
+        TestData data = matchingTestData();
+        data.shift().setScheduledStart(data.clockedAt().minusHours(6));
+        data.shift().setScheduledEnd(data.clockedAt().minusHours(3));
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> attendanceService.clockIn(data.request()));
+        assertEquals(409, error.getStatusCode().value());
+        assertNull(data.shift().getActualStart());
+        verify(shiftRepository, never()).save(data.shift());
+    }
+
+    @Test
+    void clockOut_rejectsExpiredDeadlineWithoutInventingFinishTime() {
+        TestData data = matchingTestData();
+        data.shift().setStatus(ShiftStatus.IN_PROGRESS);
+        data.shift().setActualStart(data.clockedAt().minusHours(6));
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> attendanceService.clockOut(data.request()));
+        assertEquals(409, error.getStatusCode().value());
+        assertNull(data.shift().getActualEnd());
+        assertEquals(ShiftStatus.IN_PROGRESS, data.shift().getStatus());
+        verify(shiftRepository, never()).save(data.shift());
+    }
+
+    @Test
+    void clockIn_rejectsDuplicateWithoutOverwritingOriginalStart() {
+        TestData data = matchingTestData();
+        data.shift().setActualStart(data.clockedAt().minusMinutes(10));
+        data.shift().setStatus(ShiftStatus.IN_PROGRESS);
+        assertThrows(ResponseStatusException.class, () -> attendanceService.clockIn(data.request()));
+        assertEquals(data.clockedAt().minusMinutes(10), data.shift().getActualStart());
         verify(shiftRepository, never()).save(data.shift());
     }
 
@@ -187,11 +238,13 @@ class AttendanceServiceTest {
         Site requestedSite = mock(Site.class);
         Site shiftSite = mock(Site.class);
 
+        shift.setScheduledStart(request.clockedIn());
+        shift.setScheduledEnd(request.clockedIn().plusHours(3));
         shift.setTenant(shiftTenant);
         shift.setUser(shiftUser);
         shift.setSite(shiftSite);
 
-        when(shiftRepository.findById(request.shiftId())).thenReturn(Optional.of(shift));
+        when(shiftRepository.findForAttendance(request.shiftId())).thenReturn(Optional.of(shift));
         when(tenantRepository.findById(request.tenantId())).thenReturn(Optional.of(requestedTenant));
         when(userRepository.findById(request.userId())).thenReturn(Optional.of(requestedUser));
         when(siteRepository.findById(request.siteId())).thenReturn(Optional.of(requestedSite));
@@ -216,7 +269,7 @@ class AttendanceServiceTest {
     }
 
     private void verifyLookupsAndSave(TestData data) {
-        verify(shiftRepository).findById(data.request().shiftId());
+        verify(shiftRepository).findForAttendance(data.request().shiftId());
         verify(tenantRepository).findById(data.request().tenantId());
         verify(userRepository).findById(data.request().userId());
         verify(siteRepository).findById(data.request().siteId());
