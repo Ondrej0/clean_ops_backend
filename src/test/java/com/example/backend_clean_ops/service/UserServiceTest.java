@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.service;
 
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
+import com.example.backend_clean_ops.dto.request.EditEmployeeRequest;
 import com.example.backend_clean_ops.dto.responses.CleanerResponse;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
@@ -253,5 +254,80 @@ class UserServiceTest {
         verify(userRepository).findById(userId);
         verifyNoInteractions(scheduleAssignmentRepository, tenantRepository);
         verifyNoMoreInteractions(userRepository);
+    }
+
+    @Test
+    @DisplayName("Should update every editable employee field when the employee belongs to the request tenant")
+    void editEmployeeById_whenEmployeeBelongsToTenant_shouldUpdateAndSaveEmployee() {
+        UUID tenantId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        Tenant tenant = mock(Tenant.class);
+        User employee = mock(User.class);
+        EditEmployeeRequest request = new EditEmployeeRequest(
+                tenantId, "Jamie", "Taylor", "jamie@example.com", "07123 456789",
+                UserRole.MANAGER, new BigDecimal("16.50")
+        );
+
+        when(userRepository.findById(employeeId)).thenReturn(Optional.of(employee));
+        when(employee.getTenant()).thenReturn(tenant);
+        when(tenant.getId()).thenReturn(tenantId);
+
+        userService.editEmployeeById(employeeId, request);
+
+        verify(userRepository).findById(employeeId);
+        verify(employee).setFirstName("Jamie");
+        verify(employee).setLastName("Taylor");
+        verify(employee).setEmail("jamie@example.com");
+        verify(employee).setPhone("07123 456789");
+        verify(employee).setRole(UserRole.MANAGER);
+        verify(employee).setPayRate(new BigDecimal("16.50"));
+        verify(userRepository).save(employee);
+    }
+
+    @Test
+    @DisplayName("Should reject an edit for an employee belonging to a different tenant")
+    void editEmployeeById_whenEmployeeBelongsToAnotherTenant_shouldThrowException() {
+        UUID employeeId = UUID.randomUUID();
+        Tenant employeeTenant = mock(Tenant.class);
+        User employee = mock(User.class);
+        EditEmployeeRequest request = new EditEmployeeRequest(
+                UUID.randomUUID(), "Jamie", "Taylor", "jamie@example.com", null,
+                UserRole.CLEANER, new BigDecimal("16.50")
+        );
+
+        when(userRepository.findById(employeeId)).thenReturn(Optional.of(employee));
+        when(employee.getTenant()).thenReturn(employeeTenant);
+        when(employeeTenant.getId()).thenReturn(UUID.randomUUID());
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> userService.editEmployeeById(employeeId, request)
+        );
+
+        assertEquals("Employee does not belong to tenant", exception.getMessage());
+        verify(userRepository).findById(employeeId);
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(tenantRepository, scheduleAssignmentRepository);
+    }
+
+    @Test
+    @DisplayName("Should throw without saving when the requested employee does not exist")
+    void editEmployeeById_whenEmployeeIsMissing_shouldThrowException() {
+        UUID employeeId = UUID.randomUUID();
+        EditEmployeeRequest request = new EditEmployeeRequest(
+                UUID.randomUUID(), "Jamie", "Taylor", "jamie@example.com", null,
+                UserRole.CLEANER, new BigDecimal("16.50")
+        );
+        when(userRepository.findById(employeeId)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> userService.editEmployeeById(employeeId, request)
+        );
+
+        assertEquals("Employee not found", exception.getMessage());
+        verify(userRepository).findById(employeeId);
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(tenantRepository, scheduleAssignmentRepository);
     }
 }

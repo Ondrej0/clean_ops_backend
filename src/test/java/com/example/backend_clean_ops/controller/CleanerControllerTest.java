@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.controller;
 
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
+import com.example.backend_clean_ops.dto.request.EditEmployeeRequest;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanerDataResponse;
@@ -103,6 +104,18 @@ class CleanerControllerTest {
 
         assertSame(expectedResponse, actualResponse);
         verify(userService).getCleanerData(cleanerId);
+        verifyNoMoreInteractions(userService);
+    }
+
+    @Test
+    @DisplayName("Should delegate an employee edit using the identifier from the URL")
+    void editEmployeeById_shouldPassPathEmployeeIdAndRequestToService() {
+        UUID employeeId = UUID.randomUUID();
+        EditEmployeeRequest request = mock(EditEmployeeRequest.class);
+
+        cleanerController.editEmployeeById(employeeId, request);
+
+        verify(userService).editEmployeeById(employeeId, request);
         verifyNoMoreInteractions(userService);
     }
 }

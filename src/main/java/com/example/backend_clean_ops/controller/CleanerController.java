@@ -1,11 +1,13 @@
 package com.example.backend_clean_ops.controller;
 
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
+import com.example.backend_clean_ops.dto.request.EditEmployeeRequest;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanerDataResponse;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +38,12 @@ public class CleanerController {
     @ResponseStatus(HttpStatus.OK)
     public GetCleanerDataResponse getCleanerData(@PathVariable UUID cleanerId) {
         return userService.getCleanerData(cleanerId);
+    }
+
+    @PutMapping("/{employeeId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void editEmployeeById(@PathVariable UUID employeeId, @Valid @RequestBody EditEmployeeRequest request) {
+        userService.editEmployeeById(employeeId, request);
     }
 
 }

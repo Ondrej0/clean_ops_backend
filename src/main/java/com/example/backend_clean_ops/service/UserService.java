@@ -1,6 +1,7 @@
 package com.example.backend_clean_ops.service;
 
 import com.example.backend_clean_ops.dto.request.CreateUserRequest;
+import com.example.backend_clean_ops.dto.request.EditEmployeeRequest;
 import com.example.backend_clean_ops.dto.responses.CleanerResponse;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
 import com.example.backend_clean_ops.dto.responses.AssignedScheduleResponse;
@@ -14,6 +15,7 @@ import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.repository.TenantRepository;
 import com.example.backend_clean_ops.repository.ScheduleAssignmentRepository;
 import com.example.backend_clean_ops.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -109,5 +111,24 @@ public class UserService {
                 assignedSchedules,
                 List.copyOf(assignedSitesById.values())
         );
+    }
+
+    @Transactional
+    public void editEmployeeById(UUID employeeId, EditEmployeeRequest request) {
+        User employee = userRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        if (!employee.getTenant().getId().equals(request.tenantId())) {
+            throw new RuntimeException("Employee does not belong to tenant");
+        }
+
+        employee.setFirstName(request.firstName());
+        employee.setLastName(request.lastName());
+        employee.setEmail(request.email());
+        employee.setPhone(request.phone());
+        employee.setRole(request.role());
+        employee.setPayRate(request.payRate());
+
+        userRepository.save(employee);
     }
 }

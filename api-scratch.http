@@ -63,6 +63,20 @@ Content-Type: application/json
 ### Get cleaners
 GET {{baseUrl}}/api/cleaner?tenantId=e9a0e768-4d60-443c-b6c8-d761ef26061e
 
+### Edit an employee
+PUT {{baseUrl}}/api/cleaner/625090f3-a130-4995-b603-52c32fb1c262
+Content-Type: application/json
+
+{
+  "tenantId": "e9a0e768-4d60-443c-b6c8-d761ef26061e",
+  "firstName": "Jamie",
+  "lastName": "Taylor",
+  "email": "jamie.taylor@example.com",
+  "phone": "07123 456789",
+  "role": "CLEANER",
+  "payRate": 16.50
+}
+
 ### Create a schedule
 POST {{baseUrl}}/api/schedules
 Content-Type: application/json
