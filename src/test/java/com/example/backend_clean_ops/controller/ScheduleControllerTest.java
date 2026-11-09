@@ -10,12 +10,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class ScheduleControllerTest {
@@ -28,6 +32,32 @@ class ScheduleControllerTest {
     @BeforeEach
     void setUp() {
         scheduleController = new ScheduleController(scheduleService);
+    }
+
+    @Test
+    void getSchedulesBySites_shouldAcceptOptionalUserId() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        var mvc = MockMvcBuilders.standaloneSetup(scheduleController).build();
+        when(scheduleService.getSchedulesBySites(tenantId, null)).thenReturn(List.of());
+        when(scheduleService.getSchedulesBySites(tenantId, userId)).thenReturn(List.of());
+
+        mvc.perform(get("/api/schedules/by-site").param("tenantId", tenantId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+        mvc.perform(get("/api/schedules/by-site")
+                        .param("tenantId", tenantId.toString()).param("userId", userId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+        mvc.perform(get("/api/schedules/by-site")
+                        .param("tenantId", tenantId.toString()).param("userId", "invalid"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/schedules/by-site").param("userId", userId.toString()))
+                .andExpect(status().isBadRequest());
+
+        verify(scheduleService).getSchedulesBySites(tenantId, null);
+        verify(scheduleService).getSchedulesBySites(tenantId, userId);
+        verifyNoMoreInteractions(scheduleService);
     }
 
     @Test

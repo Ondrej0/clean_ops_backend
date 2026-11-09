@@ -178,7 +178,7 @@ class ScheduleServiceTest {
         when(site.getAddressLine1()).thenReturn("1 High Street");
         when(site.getCity()).thenReturn("London");
         when(site.getPostcode()).thenReturn("SW1A 1AA");
-        when(scheduleRepository.findAllBySiteIdAndActiveTrue(siteId)).thenReturn(List.of(schedule));
+        when(scheduleRepository.findActiveBySiteIdAndUserId(siteId, null)).thenReturn(List.of(schedule));
         when(schedule.getId()).thenReturn(scheduleId);
         when(schedule.getName()).thenReturn("Weekdays");
         when(schedule.getCreatedAt()).thenReturn(createdAt);
@@ -189,7 +189,7 @@ class ScheduleServiceTest {
         when(rule.getStartTime()).thenReturn(LocalTime.of(9, 0));
         when(rule.getEndTime()).thenReturn(LocalTime.of(17, 0));
 
-        List<GetSchedulesBySitesResponse> response = scheduleService.getSchedulesBySites(tenantId);
+        List<GetSchedulesBySitesResponse> response = scheduleService.getSchedulesBySites(tenantId, null);
 
         assertEquals(1, response.size());
         GetSchedulesBySitesResponse siteResponse = response.getFirst();
@@ -216,8 +216,57 @@ class ScheduleServiceTest {
         );
 
         verify(siteRepository).findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE);
-        verify(scheduleRepository).findAllBySiteIdAndActiveTrue(siteId);
+        verify(scheduleRepository).findActiveBySiteIdAndUserId(siteId, null);
         verify(scheduleRuleRepository).findAllByScheduleIdAndActiveTrue(scheduleId);
+    }
+
+    @Test
+    void getSchedulesBySites_withUserId_shouldGroupMatchesAndOmitEmptySites() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        Site firstSite = mock(Site.class);
+        when(firstSite.getId()).thenReturn(UUID.randomUUID());
+        Site secondSite = mock(Site.class);
+        when(secondSite.getId()).thenReturn(UUID.randomUUID());
+        Site emptySite = mock(Site.class);
+        when(emptySite.getId()).thenReturn(UUID.randomUUID());
+        Schedule firstSchedule = mock(Schedule.class);
+        when(firstSchedule.getId()).thenReturn(UUID.randomUUID());
+        Schedule secondSchedule = mock(Schedule.class);
+        when(secondSchedule.getId()).thenReturn(UUID.randomUUID());
+        when(siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE))
+                .thenReturn(List.of(firstSite, secondSite, emptySite));
+        when(scheduleRepository.findActiveBySiteIdAndUserId(firstSite.getId(), userId))
+                .thenReturn(List.of(firstSchedule));
+        when(scheduleRepository.findActiveBySiteIdAndUserId(secondSite.getId(), userId))
+                .thenReturn(List.of(secondSchedule));
+        when(scheduleRepository.findActiveBySiteIdAndUserId(emptySite.getId(), userId))
+                .thenReturn(List.of());
+
+        var response = scheduleService.getSchedulesBySites(tenantId, userId);
+
+        assertEquals(List.of(firstSite.getId(), secondSite.getId()),
+                response.stream().map(GetSchedulesBySitesResponse::siteId).toList());
+        assertEquals(firstSchedule.getId(), response.getFirst().schedules().getFirst().scheduleId());
+        assertEquals(secondSchedule.getId(), response.get(1).schedules().getFirst().scheduleId());
+        verify(scheduleRuleRepository).findAllByScheduleIdAndActiveTrue(firstSchedule.getId());
+        verify(scheduleRuleRepository).findAllByScheduleIdAndActiveTrue(secondSchedule.getId());
+    }
+
+    @Test
+    void getSchedulesBySites_shouldKeepEmptySitesOnlyWhenUserFilterIsOmitted() {
+        UUID tenantId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        Site site = mock(Site.class);
+        when(site.getId()).thenReturn(UUID.randomUUID());
+        when(siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE))
+                .thenReturn(List.of(site));
+
+        var unfiltered = scheduleService.getSchedulesBySites(tenantId, null);
+        assertEquals(1, unfiltered.size());
+        assertTrue(unfiltered.getFirst().schedules().isEmpty());
+        assertTrue(scheduleService.getSchedulesBySites(tenantId, userId).isEmpty());
+        verifyNoInteractions(scheduleRuleRepository);
     }
 
     @Test

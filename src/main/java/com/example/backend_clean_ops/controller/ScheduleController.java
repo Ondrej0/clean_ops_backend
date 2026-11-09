@@ -47,8 +47,10 @@ public class ScheduleController {
 
     @GetMapping("/by-site")
     @ResponseStatus(HttpStatus.OK)
-    public List<GetSchedulesBySitesResponse> getSchedulesBySites(@RequestParam UUID tenantId){
-        return scheduleService.getSchedulesBySites(tenantId);
+    public List<GetSchedulesBySitesResponse> getSchedulesBySites(
+            @RequestParam UUID tenantId,
+            @RequestParam(required = false) UUID userId) {
+        return scheduleService.getSchedulesBySites(tenantId, userId);
     }
 
 

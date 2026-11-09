@@ -86,7 +86,7 @@ public class ScheduleService {
         );
     }
 
-    public List<GetSchedulesBySitesResponse> getSchedulesBySites(UUID tenantId) {
+    public List<GetSchedulesBySitesResponse> getSchedulesBySites(UUID tenantId, UUID userId) {
         return siteRepository.findAllByTenantIdAndStatus(tenantId, SiteStatus.ACTIVE)
                 .stream()
                 .map(site -> new GetSchedulesBySitesResponse(
@@ -95,7 +95,7 @@ public class ScheduleService {
                         site.getAddressLine1(),
                         site.getCity(),
                         site.getPostcode(),
-                        scheduleRepository.findAllBySiteIdAndActiveTrue(site.getId())
+                        scheduleRepository.findActiveBySiteIdAndUserId(site.getId(), userId)
                                 .stream()
                                 .map(schedule -> new GetScheduleResponse(
                                         schedule.getId(),
@@ -114,6 +114,7 @@ public class ScheduleService {
                                 ))
                                 .toList()
                 ))
+                .filter(site -> userId == null || !site.schedules().isEmpty())
                 .toList();
     }
 
