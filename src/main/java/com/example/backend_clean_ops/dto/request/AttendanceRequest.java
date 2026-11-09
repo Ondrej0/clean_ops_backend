@@ -8,7 +8,5 @@ public record AttendanceRequest(
         @NotNull UUID tenantId,
         @NotNull UUID siteId,
         @NotNull UUID shiftId,
-        @NotNull UUID userId,
-        // Retained for client compatibility; attendance timestamps are set by the server.
-        LocalDateTime clockedIn
+        @NotNull UUID userId
 ) {}
