@@ -18,6 +18,7 @@ public record EditEmployeeRequest(
         @NotBlank @Email @Size(max = 255) String email,
         @Size(max = 50) String phone,
         @NotNull UserRole role,
-        @DecimalMin(value = "0.00") @Digits(integer = 8, fraction = 2) BigDecimal payRate
+        @DecimalMin(value = "0.00") @Digits(integer = 8, fraction = 2) BigDecimal payRate,
+        @Size(max = 500) String address
 ) {
 }

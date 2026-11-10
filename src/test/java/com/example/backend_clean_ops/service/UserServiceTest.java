@@ -215,6 +215,7 @@ class UserServiceTest {
         when(cleaner.getLastName()).thenReturn("Doe");
         when(cleaner.getEmail()).thenReturn("jane@example.com");
         when(cleaner.getPhone()).thenReturn("07123456789");
+        when(cleaner.getAddress()).thenReturn("12 High Street, London");
         when(cleaner.getPayRate()).thenReturn(new BigDecimal("19.50"));
         when(cleaner.isActive()).thenReturn(true);
         when(cleaner.getCreatedAt()).thenReturn(createdAt);
@@ -224,6 +225,7 @@ class UserServiceTest {
 
         assertAll(
                 () -> assertEquals(cleanerId, response.id()),
+                () -> assertEquals("12 High Street, London", response.address()),
                 () -> assertEquals("Jane", response.firstName()),
                 () -> assertEquals(new BigDecimal("19.50"), response.payRate()),
                 () -> assertEquals(List.of(
@@ -265,7 +267,7 @@ class UserServiceTest {
         User employee = mock(User.class);
         EditEmployeeRequest request = new EditEmployeeRequest(
                 tenantId, "Jamie", "Taylor", "jamie@example.com", "07123 456789",
-                UserRole.MANAGER, new BigDecimal("16.50")
+                UserRole.MANAGER, new BigDecimal("16.50"), null
         );
 
         when(userRepository.findById(employeeId)).thenReturn(Optional.of(employee));
@@ -279,6 +281,7 @@ class UserServiceTest {
         verify(employee).setLastName("Taylor");
         verify(employee).setEmail("jamie@example.com");
         verify(employee).setPhone("07123 456789");
+        verify(employee, never()).setAddress(any());
         verify(employee).setRole(UserRole.MANAGER);
         verify(employee).setPayRate(new BigDecimal("16.50"));
         verify(userRepository).save(employee);
@@ -292,7 +295,7 @@ class UserServiceTest {
         User employee = mock(User.class);
         EditEmployeeRequest request = new EditEmployeeRequest(
                 UUID.randomUUID(), "Jamie", "Taylor", "jamie@example.com", null,
-                UserRole.CLEANER, new BigDecimal("16.50")
+                UserRole.CLEANER, new BigDecimal("16.50"), null
         );
 
         when(userRepository.findById(employeeId)).thenReturn(Optional.of(employee));
@@ -316,7 +319,7 @@ class UserServiceTest {
         UUID employeeId = UUID.randomUUID();
         EditEmployeeRequest request = new EditEmployeeRequest(
                 UUID.randomUUID(), "Jamie", "Taylor", "jamie@example.com", null,
-                UserRole.CLEANER, new BigDecimal("16.50")
+                UserRole.CLEANER, new BigDecimal("16.50"), null
         );
         when(userRepository.findById(employeeId)).thenReturn(Optional.empty());
 
@@ -329,5 +332,29 @@ class UserServiceTest {
         verify(userRepository).findById(employeeId);
         verify(userRepository, never()).save(any());
         verifyNoInteractions(tenantRepository, scheduleAssignmentRepository);
+    }
+
+    @Test
+    void editEmployeeById_shouldSaveAndClearPersonalAddress() {
+        UUID tenantId = UUID.randomUUID();
+        UUID employeeId = UUID.randomUUID();
+        Tenant tenant = mock(Tenant.class);
+        User employee = new User();
+        employee.setTenant(tenant);
+        when(tenant.getId()).thenReturn(tenantId);
+        when(userRepository.findById(employeeId)).thenReturn(Optional.of(employee));
+
+        userService.editEmployeeById(employeeId, new EditEmployeeRequest(
+                tenantId, "Jamie", "Taylor", "jamie@example.com", null,
+                UserRole.CLEANER, new BigDecimal("16.50"), " 12 High Street, London "
+        ));
+        assertEquals("12 High Street, London", employee.getAddress());
+
+        userService.editEmployeeById(employeeId, new EditEmployeeRequest(
+                tenantId, "Jamie", "Taylor", "jamie@example.com", null,
+                UserRole.CLEANER, new BigDecimal("16.50"), ""
+        ));
+        assertNull(employee.getAddress());
+        verify(userRepository, times(2)).save(employee);
     }
 }

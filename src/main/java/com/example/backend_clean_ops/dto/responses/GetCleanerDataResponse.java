@@ -14,6 +14,7 @@ public record GetCleanerDataResponse(
         String lastName,
         String email,
         String phone,
+        String address,
         UserRole role,
         BigDecimal payRate,
         boolean active,

@@ -103,6 +103,7 @@ public class UserService {
                 cleaner.getLastName(),
                 cleaner.getEmail(),
                 cleaner.getPhone(),
+                cleaner.getAddress(),
                 cleaner.getRole(),
                 cleaner.getPayRate(),
                 cleaner.isActive(),
@@ -126,6 +127,10 @@ public class UserService {
         employee.setLastName(request.lastName());
         employee.setEmail(request.email());
         employee.setPhone(request.phone());
+        // Older manager clients omit address; an empty string explicitly clears it.
+        if (request.address() != null) {
+            employee.setAddress(request.address().trim().isEmpty() ? null : request.address().trim());
+        }
         employee.setRole(request.role());
         employee.setPayRate(request.payRate());
 

@@ -25,7 +25,7 @@ class EditEmployeeRequestValidationTest {
     void validRequest_shouldHaveNoValidationErrors() {
         EditEmployeeRequest request = new EditEmployeeRequest(
                 UUID.randomUUID(), "Jamie", "Taylor", "jamie@example.com", "07123 456789",
-                UserRole.CLEANER, new BigDecimal("16.50")
+                UserRole.CLEANER, new BigDecimal("16.50"), null
         );
 
         assertEquals(0, validator.validate(request).size());
@@ -34,7 +34,7 @@ class EditEmployeeRequestValidationTest {
     @Test
     void invalidRequest_shouldRejectMissingRequiredValuesAndInvalidDetails() {
         EditEmployeeRequest request = new EditEmployeeRequest(
-                null, "", "", "invalid-email", null, null, new BigDecimal("-0.01")
+                null, "", "", "invalid-email", null, null, new BigDecimal("-0.01"), null
         );
 
         Set<String> invalidFields = validator.validate(request).stream()
@@ -42,5 +42,16 @@ class EditEmployeeRequestValidationTest {
                 .collect(java.util.stream.Collectors.toSet());
 
         assertEquals(Set.of("tenantId", "firstName", "lastName", "email", "role", "payRate"), invalidFields);
+    }
+
+    @Test
+    void address_shouldRejectMoreThan500Characters() {
+        EditEmployeeRequest request = new EditEmployeeRequest(
+                UUID.randomUUID(), "Jamie", "Taylor", "jamie@example.com", null,
+                UserRole.CLEANER, null, "a".repeat(501)
+        );
+        assertEquals(Set.of("address"), validator.validate(request).stream()
+                .map(violation -> violation.getPropertyPath().toString())
+                .collect(java.util.stream.Collectors.toSet()));
     }
 }
