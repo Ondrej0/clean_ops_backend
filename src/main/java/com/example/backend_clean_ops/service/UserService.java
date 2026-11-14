@@ -42,8 +42,7 @@ public class UserService {
         user.setTenant(tenant);
         user.setFirstName(request.firstName());
         user.setLastName(request.lastName());
-        //TODO take password as test and hash it
-        user.setPasswordHash(request.passwordHash());
+        user.setPasswordHash(EmployeePasswords.hashLegacyValue(request.passwordHash()));
         user.setEmail(request.email());
         user.setPayRate(request.payRate());
         user.setRole(userRole);

@@ -5,7 +5,7 @@ import com.example.backend_clean_ops.dto.request.EditEmployeeRequest;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanerDataResponse;
-import com.example.backend_clean_ops.enums.UserRole;
+import com.example.backend_clean_ops.service.EmployeeAccountService;
 import com.example.backend_clean_ops.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +21,12 @@ import java.util.UUID;
 public class CleanerController {
 
     private final UserService userService;
+    private final EmployeeAccountService accounts;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CreateUserResponse createCleaner(@RequestBody CreateUserRequest request) {
-        return userService.createUser(request, UserRole.CLEANER);
+        return accounts.createCleaner(request);
     }
 
     @GetMapping
@@ -43,7 +44,7 @@ public class CleanerController {
     @PutMapping("/{employeeId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void editEmployeeById(@PathVariable UUID employeeId, @Valid @RequestBody EditEmployeeRequest request) {
-        userService.editEmployeeById(employeeId, request);
+        accounts.edit(employeeId, request);
     }
 
 }

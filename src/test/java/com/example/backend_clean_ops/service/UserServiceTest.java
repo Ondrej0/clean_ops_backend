@@ -95,7 +95,8 @@ class UserServiceTest {
                 () -> assertSame(tenant, savedUserEntity.getTenant()),
                 () -> assertEquals("Jane", savedUserEntity.getFirstName()),
                 () -> assertEquals("Doe", savedUserEntity.getLastName()),
-                () -> assertEquals("hashed-password", savedUserEntity.getPasswordHash()),
+                () -> assertTrue(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
+                        .matches("hashed-password", savedUserEntity.getPasswordHash())),
                 () -> assertEquals("jane@example.com", savedUserEntity.getEmail()),
                 () -> assertEquals(UserRole.CLEANER, savedUserEntity.getRole())
         );

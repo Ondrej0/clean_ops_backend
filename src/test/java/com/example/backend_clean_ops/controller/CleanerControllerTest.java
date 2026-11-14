@@ -5,7 +5,7 @@ import com.example.backend_clean_ops.dto.request.EditEmployeeRequest;
 import com.example.backend_clean_ops.dto.responses.CreateUserResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanersResponse;
 import com.example.backend_clean_ops.dto.responses.GetCleanerDataResponse;
-import com.example.backend_clean_ops.enums.UserRole;
+import com.example.backend_clean_ops.service.EmployeeAccountService;
 import com.example.backend_clean_ops.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,11 +26,12 @@ class CleanerControllerTest {
     @Mock
     private UserService userService;
 
+    @Mock private EmployeeAccountService accounts;
     private CleanerController cleanerController;
 
     @BeforeEach
     void setUp() {
-        cleanerController = new CleanerController(userService);
+        cleanerController = new CleanerController(userService, accounts);
     }
 
     @Test
@@ -40,7 +41,7 @@ class CleanerControllerTest {
         CreateUserRequest request = mock(CreateUserRequest.class);
         CreateUserResponse expectedResponse = mock(CreateUserResponse.class);
 
-        when(userService.createUser(request, UserRole.CLEANER))
+        when(accounts.createCleaner(request))
                 .thenReturn(expectedResponse);
 
         // Act
@@ -50,8 +51,8 @@ class CleanerControllerTest {
         // Assert
         assertSame(expectedResponse, actualResponse);
 
-        verify(userService).createUser(request, UserRole.CLEANER);
-        verifyNoMoreInteractions(userService);
+        verify(accounts).createCleaner(request);
+        verifyNoMoreInteractions(userService, accounts);
     }
 
     @Test
@@ -63,7 +64,7 @@ class CleanerControllerTest {
         RuntimeException exception =
                 new RuntimeException("Unable to create cleaner");
 
-        when(userService.createUser(request, UserRole.CLEANER))
+        when(accounts.createCleaner(request))
                 .thenThrow(exception);
 
         // Act
@@ -75,8 +76,8 @@ class CleanerControllerTest {
         // Assert
         assertSame(exception, thrownException);
 
-        verify(userService).createUser(request, UserRole.CLEANER);
-        verifyNoMoreInteractions(userService);
+        verify(accounts).createCleaner(request);
+        verifyNoMoreInteractions(userService, accounts);
     }
 
     @Test
@@ -90,7 +91,7 @@ class CleanerControllerTest {
 
         assertSame(expectedResponse, actualResponse);
         verify(userService).getCleaners(tenantId);
-        verifyNoMoreInteractions(userService);
+        verifyNoMoreInteractions(userService, accounts);
     }
 
     @Test
@@ -104,7 +105,7 @@ class CleanerControllerTest {
 
         assertSame(expectedResponse, actualResponse);
         verify(userService).getCleanerData(cleanerId);
-        verifyNoMoreInteractions(userService);
+        verifyNoMoreInteractions(userService, accounts);
     }
 
     @Test
@@ -115,7 +116,7 @@ class CleanerControllerTest {
 
         cleanerController.editEmployeeById(employeeId, request);
 
-        verify(userService).editEmployeeById(employeeId, request);
-        verifyNoMoreInteractions(userService);
+        verify(accounts).edit(employeeId, request);
+        verifyNoMoreInteractions(userService, accounts);
     }
 }

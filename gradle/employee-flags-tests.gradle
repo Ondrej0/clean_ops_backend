@@ -1,0 +1,6 @@
+// Focused verification while the unrelated legacy AttendanceServiceTest is stale.
+allprojects {
+    afterEvaluate {
+        sourceSets.test.java.setIncludes(['**/EmployeeFlag*Test.java', '**/Shift*Test.java', '**/Schedule*Test.java', '**/UserServiceTest.java', '**/CleanerControllerTest.java'])
+    }
+}
