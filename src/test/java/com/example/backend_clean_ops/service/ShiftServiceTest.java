@@ -22,6 +22,39 @@ class ShiftServiceTest {
     private final UUID userId = UUID.randomUUID();
 
     @Test
+    void explicitCalendarWeekUsesInclusiveDatesAndPreservesShiftIdentityAndScheduleName() {
+        when(users.existsByIdAndTenantId(userId, tenantId)).thenReturn(true);
+        var from = LocalDate.parse("2026-07-06");
+        var to = LocalDate.parse("2026-07-12");
+        Shift shift = Shift.builder().site(Site.builder().name("Office").build())
+                .schedule(com.example.backend_clean_ops.entity.Schedule.builder().name("Morning clean").build())
+                .scheduledStart(from.atTime(9, 0)).scheduledEnd(from.atTime(12, 0))
+                .status(ShiftStatus.COMPLETED).build();
+        org.springframework.test.util.ReflectionTestUtils.setField(shift, "id", UUID.randomUUID());
+        when(shifts.findInWindow(tenantId, userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay()))
+                .thenReturn(List.of(shift));
+        var result = service.getShifts(tenantId, userId, from, to);
+        assertEquals(from, result.fromDate());
+        assertEquals(to, result.toDate());
+        assertEquals(shift.getId(), result.shifts().getFirst().id());
+        assertEquals("Morning clean", result.shifts().getFirst().scheduleName());
+        assertEquals(ZoneOffset.ofHours(1), result.shifts().getFirst().scheduledStart().getOffset());
+        verify(shifts).findInWindow(tenantId, userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+    }
+
+    @Test
+    void invalidCalendarRangesAreRejectedBeforeQueryingShifts() {
+        var from = LocalDate.parse("2026-11-09");
+        for (LocalDate[] range : List.of(new LocalDate[]{from, null}, new LocalDate[]{null, from},
+                new LocalDate[]{from, from.minusDays(1)}, new LocalDate[]{from, from.plusDays(366)})) {
+            var error = assertThrows(ResponseStatusException.class,
+                    () -> service.getShifts(tenantId, userId, range[0], range[1]));
+            assertEquals(400, error.getStatusCode().value());
+        }
+        verifyNoInteractions(shifts);
+    }
+
+    @Test
     void usesUkDatesAndIncludesHistoryWithNoActions() {
         when(users.existsByIdAndTenantId(userId, tenantId)).thenReturn(true);
         Shift completed = Shift.builder().site(Site.builder().name("Office").build())

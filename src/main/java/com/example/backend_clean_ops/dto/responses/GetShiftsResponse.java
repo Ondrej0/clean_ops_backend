@@ -10,7 +10,7 @@ public record GetShiftsResponse(String timezone, LocalDate fromDate, LocalDate t
     public record SiteDetails(UUID id, String name) {}
 
     public record ShiftDetails(
-            UUID id, SiteDetails site,
+            UUID id, SiteDetails site, String scheduleName,
             OffsetDateTime scheduledStart, OffsetDateTime scheduledEnd,
             OffsetDateTime actualStart, OffsetDateTime actualEnd, ShiftStatus status,
             OffsetDateTime clockInOpensAt, OffsetDateTime clockInDeadline,

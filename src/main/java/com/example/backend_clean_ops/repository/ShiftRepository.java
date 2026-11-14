@@ -16,7 +16,7 @@ import java.util.UUID;
 
 public interface ShiftRepository extends JpaRepository<Shift, UUID> {
     @Query("""
-            select s from Shift s join fetch s.site
+            select s from Shift s join fetch s.site left join fetch s.schedule
             where s.tenant.id = :tenantId and s.user.id = :userId
               and s.scheduledStart < :until and s.scheduledEnd > :from
             order by s.scheduledStart, s.id
