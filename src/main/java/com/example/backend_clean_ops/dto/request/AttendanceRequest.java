@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 public record AttendanceRequest(
-        @NotNull UUID tenantId,
+        UUID tenantId,
         @NotNull UUID siteId,
         @NotNull UUID shiftId,
-        @NotNull UUID userId
+        UUID userId
 ) {}

@@ -22,6 +22,13 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CleanerControllerTest {
+    private static com.example.backend_clean_ops.service.ResourceAccess mockAccess() {
+        return org.mockito.Mockito.mock(com.example.backend_clean_ops.service.ResourceAccess.class, invocation -> {
+            if (invocation.getMethod().getReturnType() == java.util.UUID.class) return invocation.getArgument(0);
+            return null;
+        });
+    }
+
 
     @Mock
     private UserService userService;
@@ -31,14 +38,14 @@ class CleanerControllerTest {
 
     @BeforeEach
     void setUp() {
-        cleanerController = new CleanerController(userService, accounts);
+        cleanerController = new CleanerController(mockAccess(), userService, accounts);
     }
 
     @Test
     @DisplayName("Should create cleaner using CLEANER role and return service response")
     void createCleaner_shouldCallUserServiceWithCleanerRole_andReturnResponse() {
         // Arrange
-        CreateUserRequest request = mock(CreateUserRequest.class);
+        CreateUserRequest request = new CreateUserRequest(UUID.randomUUID(), "Jane", "Doe", "secret", "jane@example.com", null);
         CreateUserResponse expectedResponse = mock(CreateUserResponse.class);
 
         when(accounts.createCleaner(request))
@@ -59,7 +66,7 @@ class CleanerControllerTest {
     @DisplayName("Should propagate exception when user service fails")
     void createCleaner_whenUserServiceThrows_shouldPropagateException() {
         // Arrange
-        CreateUserRequest request = mock(CreateUserRequest.class);
+        CreateUserRequest request = new CreateUserRequest(UUID.randomUUID(), "Jane", "Doe", "secret", "jane@example.com", null);
 
         RuntimeException exception =
                 new RuntimeException("Unable to create cleaner");
@@ -112,7 +119,7 @@ class CleanerControllerTest {
     @DisplayName("Should delegate an employee edit using the identifier from the URL")
     void editEmployeeById_shouldPassPathEmployeeIdAndRequestToService() {
         UUID employeeId = UUID.randomUUID();
-        EditEmployeeRequest request = mock(EditEmployeeRequest.class);
+        EditEmployeeRequest request = new EditEmployeeRequest(UUID.randomUUID(), "Jane", "Doe", "jane@example.com", null, com.example.backend_clean_ops.enums.UserRole.CLEANER, null, null);
 
         cleanerController.editEmployeeById(employeeId, request);
 

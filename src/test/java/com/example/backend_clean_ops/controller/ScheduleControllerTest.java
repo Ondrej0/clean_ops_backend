@@ -23,6 +23,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 class ScheduleControllerTest {
+    private static com.example.backend_clean_ops.service.ResourceAccess mockAccess() {
+        return org.mockito.Mockito.mock(com.example.backend_clean_ops.service.ResourceAccess.class, invocation -> {
+            if (invocation.getMethod().getReturnType() == java.util.UUID.class) return invocation.getArgument(0);
+            return null;
+        });
+    }
+
 
     @Mock
     private ScheduleService scheduleService;
@@ -31,7 +38,7 @@ class ScheduleControllerTest {
 
     @BeforeEach
     void setUp() {
-        scheduleController = new ScheduleController(scheduleService);
+        scheduleController = new ScheduleController(mockAccess(), scheduleService);
     }
 
     @Test
@@ -53,10 +60,11 @@ class ScheduleControllerTest {
                         .param("tenantId", tenantId.toString()).param("userId", "invalid"))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/schedules/by-site").param("userId", userId.toString()))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk());
 
         verify(scheduleService).getSchedulesBySites(tenantId, null);
         verify(scheduleService).getSchedulesBySites(tenantId, userId);
+        verify(scheduleService).getSchedulesBySites(null, userId);
         verifyNoMoreInteractions(scheduleService);
     }
 
@@ -96,7 +104,7 @@ class ScheduleControllerTest {
     @Test
     @DisplayName("Should delegate schedule creation to schedule service and return response")
     void createAndAssignSchedule_shouldCallScheduleService_andReturnResponse() {
-        CreateScheduleRequest request = mock(CreateScheduleRequest.class);
+        CreateScheduleRequest request = new CreateScheduleRequest(UUID.randomUUID(), UUID.randomUUID(), "Weekly", List.of());
         CreateScheduleResponse expectedResponse = mock(CreateScheduleResponse.class);
 
         when(scheduleService.createAndAssignSchedule(request)).thenReturn(expectedResponse);
@@ -112,7 +120,7 @@ class ScheduleControllerTest {
     @Test
     @DisplayName("Should propagate exception when schedule service fails")
     void createAndAssignSchedule_whenScheduleServiceThrows_shouldPropagateException() {
-        CreateScheduleRequest request = mock(CreateScheduleRequest.class);
+        CreateScheduleRequest request = new CreateScheduleRequest(UUID.randomUUID(), UUID.randomUUID(), "Weekly", List.of());
         RuntimeException exception = new RuntimeException("Unable to create schedule");
 
         when(scheduleService.createAndAssignSchedule(request)).thenThrow(exception);

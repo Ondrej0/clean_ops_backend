@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.UUID;
 
-/** Guard identity writes so legacy employee endpoints cannot bypass flag authorization. */
+/** Authorize employee account creation and edits within the current tenant. */
 @Service @RequiredArgsConstructor
 public class EmployeeAccountService {
     private final CurrentEmployee current;

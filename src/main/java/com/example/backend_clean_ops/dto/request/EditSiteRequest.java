@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record EditSiteRequest(
-        @NotNull UUID tenantId,
+        UUID tenantId,
         @NotBlank @Size(max = 255) String name,
         @NotBlank @Size(max = 255) String addressLine1,
         @Size(max = 255) String addressLine2,

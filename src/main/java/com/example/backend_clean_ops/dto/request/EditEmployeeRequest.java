@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record EditEmployeeRequest(
-        @NotNull UUID tenantId,
+        UUID tenantId,
         @NotBlank @Size(max = 100) String firstName,
         @NotBlank @Size(max = 100) String lastName,
         @NotBlank @Email @Size(max = 255) String email,

@@ -221,8 +221,8 @@ class EmployeeFlagIntegrationTest {
                 .param("password", "test-password")).andExpect(status().isNoContent()).andReturn();
         var session = (MockHttpSession) login.getRequest().getSession(false);
         mvc.perform(get("/api/session/me").session(session)).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(cleaner.getId().toString()));
-        mvc.perform(get("/api/me/shifts").session(session).param("fromDate", "2026-11-09").param("toDate", "2026-11-15")
-                .param("userId", colleague.getId().toString()).param("tenantId", otherTenant.getId().toString()))
+        mvc.perform(get("/api/shifts").session(session).param("fromDate", "2026-11-09").param("toDate", "2026-11-15")
+                )
                 .andExpect(status().isOk()).andExpect(jsonPath("$.shifts.length()").value(2));
         mvc.perform(get("/api/session/csrf").session(session)).andExpect(status().isOk()).andExpect(jsonPath("$.token").isNotEmpty());
         mvc.perform(post("/api/employee-flags/schedule-overlaps").session(session).with(csrf()).contentType("application/json").content(REPORT))
@@ -239,7 +239,7 @@ class EmployeeFlagIntegrationTest {
         mvc.perform(put("/api/cleaner/{id}", cleaner.getId()).with(user(cleaner.getId().toString())).with(csrf()).contentType("application/json").content(body))
                 .andExpect(status().isForbidden());
         mvc.perform(put("/api/cleaner/{id}", cleaner.getId()).with(user(outsider.getId().toString())).with(csrf()).contentType("application/json").content(body))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mvc.perform(put("/api/cleaner/{id}", colleague.getId()).with(user(cleaner.getId().toString())).with(csrf()).contentType("application/json").content(body.replace("MANAGER", "CLEANER")))
                 .andExpect(status().isForbidden());
         mvc.perform(put("/api/cleaner/{id}", cleaner.getId()).with(user(cleaner.getId().toString())).with(csrf()).contentType("application/json").content(body.replace("MANAGER", "CLEANER")))
@@ -267,6 +267,101 @@ class EmployeeFlagIntegrationTest {
         String fresh = com.jayway.jsonpath.JsonPath.read(next.getResponse().getContentAsString(), "$.token");
         mvc.perform(post("/api/employee-flags/schedule-overlaps").session(session).header("X-CSRF-TOKEN", fresh)
                 .contentType("application/json").content(REPORT)).andExpect(status().isOk()).andExpect(jsonPath("$.created").value(1));
+    }
+
+
+    @Test void allResourceApisRequireSessionsAndRejectCrossTenantAccess() throws Exception {
+        overlap();
+        for (String path : List.of("/api/shifts", "/api/sites", "/api/schedules/by-site", "/api/cleaner", "/api/unknown"))
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/shifts").with(user(cleaner.getId().toString())).param("userId", colleague.getId().toString()))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/shifts").with(user(cleaner.getId().toString())).param("tenantId", otherTenant.getId().toString()))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/shifts").with(user(manager.getId().toString())).param("userId", cleaner.getId().toString()))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/cleaner").with(user(cleaner.getId().toString()))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/cleaner/{id}", cleaner.getId()).with(user(outsider.getId().toString()))).andExpect(status().isNotFound());
+        mvc.perform(get("/api/cleaner/{id}", colleague.getId()).with(user(cleaner.getId().toString()))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/sites/{id}", site.getId()).with(user(outsider.getId().toString()))).andExpect(status().isNotFound());
+        mvc.perform(get("/api/sites/{id}", site.getId()).with(user(cleaner.getId().toString()))).andExpect(status().isNotFound());
+        mvc.perform(get("/api/sites/{id}", site.getId()).with(user(manager.getId().toString()))).andExpect(status().isOk());
+        for (String path : List.of("/api/sites", "/api/schedules", "/api/attendance/clockIn"))
+            mvc.perform(post(path).with(user(cleaner.getId().toString())).contentType("application/json").content("{}"))
+                    .andExpect(status().isForbidden());
+        mvc.perform(post("/api/tenant").with(user(manager.getId().toString())).with(csrf()).contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/sites").with(user(cleaner.getId().toString())).with(csrf()).contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/attendance/clockIn").with(user(manager.getId().toString())).with(csrf()).contentType("application/json")
+                .content("{\"siteId\":\""+site.getId()+"\",\"shiftId\":\""+UUID.randomUUID()+"\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test void schedulesAndSitesUseTheSessionTenantAndAssignments() throws Exception {
+        Schedule assigned = Schedule.builder().tenant(tenant).site(site).name("Assigned").build();
+        Schedule unassigned = Schedule.builder().tenant(tenant).site(site).name("Unassigned").build();
+        em.persist(assigned); em.persist(unassigned);
+        em.persist(ScheduleAssignment.builder().tenant(tenant).schedule(assigned).user(cleaner).build());
+        em.flush();
+        mvc.perform(get("/api/schedules/by-site").with(user(cleaner.getId().toString())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].schedules.length()").value(1))
+                .andExpect(jsonPath("$[0].schedules[0].scheduleId").value(assigned.getId().toString()));
+        mvc.perform(get("/api/sites").with(user(cleaner.getId().toString())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.Sites.length()").value(1));
+        mvc.perform(get("/api/sites/{id}", site.getId()).with(user(cleaner.getId().toString()))).andExpect(status().isOk());
+        mvc.perform(get("/api/schedules").param("scheduleId", assigned.getId().toString()).with(user(cleaner.getId().toString())))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/schedules").param("scheduleId", unassigned.getId().toString()).with(user(cleaner.getId().toString())))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/schedules").param("scheduleId", assigned.getId().toString()).with(user(outsider.getId().toString())))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/schedules/assign/cleaner").with(user(manager.getId().toString())).with(csrf())
+                        .param("scheduleId", assigned.getId().toString()).param("cleanerId", outsider.getId().toString()))
+                .andExpect(status().isNotFound());
+        for (User actor : List.of(cleaner, outsider)) {
+            mvc.perform(post("/api/schedules/edit").with(user(actor.getId().toString())).with(csrf())
+                            .contentType("application/json").content("{\"scheduleId\":\""+assigned.getId()+"\",\"name\":\"Changed\",\"scheduleRule\":[]}"))
+                    .andExpect(status().is(actor == cleaner ? 403 : 404));
+        }
+        assertThat(assigned.getName()).isEqualTo("Assigned");
+    }
+
+    @Test void managerCreatesResourcesWithoutSupplyingATenant() throws Exception {
+        mvc.perform(post("/api/sites").with(user(manager.getId().toString())).with(csrf()).contentType("application/json")
+                        .content("{\"name\":\"New Office\",\"addressLine1\":\"1 Road\",\"city\":\"London\",\"postcode\":\"SW1A 1AA\"}"))
+                .andExpect(status().isCreated());
+        Site created = em.createQuery("select s from Site s where s.name = 'New Office'", Site.class).getSingleResult();
+        assertThat(created.getTenant().getId()).isEqualTo(tenant.getId());
+        String schedule = "{\"siteId\":\"" + created.getId() + "\",\"name\":\"New Schedule\",\"scheduleRule\":[]}";
+        mvc.perform(post("/api/schedules").with(user(outsider.getId().toString())).with(csrf()).contentType("application/json").content(schedule))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/schedules").with(user(manager.getId().toString())).with(csrf()).contentType("application/json").content(schedule))
+                .andExpect(status().isCreated());
+        Schedule saved = em.createQuery("select s from Schedule s where s.name = 'New Schedule'", Schedule.class).getSingleResult();
+        assertThat(saved.getTenant().getId()).isEqualTo(tenant.getId());
+        mvc.perform(post("/api/schedules/assign/cleaner").with(user(manager.getId().toString())).with(csrf())
+                        .param("scheduleId", saved.getId().toString()).param("cleanerId", cleaner.getId().toString()))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/cleaner").with(user(manager.getId().toString())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.cleaners.length()").value(2));
+    }
+
+    @Test void attendanceUsesSessionIdentityAndRejectsAnotherCleanersShift() throws Exception {
+        LocalDateTime now = LocalDateTime.now(ShiftTimingPolicy.ZONE);
+        Shift own = shift(cleaner, now.minusMinutes(1).toString(), now.plusHours(2).toString());
+        Shift other = shift(colleague, now.minusMinutes(1).toString(), now.plusHours(2).toString());
+        String ownBody = "{\"siteId\":\""+site.getId()+"\",\"shiftId\":\""+own.getId()+"\"}";
+        mvc.perform(post("/api/attendance/clockIn").with(user(cleaner.getId().toString())).with(csrf()).contentType("application/json")
+                        .content(ownBody.replace(own.getId().toString(), other.getId().toString())))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/attendance/clockIn").with(user(cleaner.getId().toString())).with(csrf()).contentType("application/json").content(ownBody))
+                .andExpect(status().isAccepted());
+        assertThat(own.getStatus()).isEqualTo(ShiftStatus.IN_PROGRESS);
+        assertThat(other.getStatus()).isEqualTo(ShiftStatus.SCHEDULED);
+        mvc.perform(post("/api/attendance/clockOut").with(user(cleaner.getId().toString())).with(csrf()).contentType("application/json").content(ownBody))
+                .andExpect(status().isAccepted());
+        assertThat(own.getStatus()).isEqualTo(ShiftStatus.COMPLETED);
     }
 
     private ResultActions report(User actor) throws Exception {

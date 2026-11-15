@@ -12,10 +12,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ShiftControllerTest {
+    private static com.example.backend_clean_ops.service.ResourceAccess mockAccess() {
+        return org.mockito.Mockito.mock(com.example.backend_clean_ops.service.ResourceAccess.class, invocation -> {
+            if (invocation.getMethod().getReturnType() == java.util.UUID.class) return invocation.getArgument(0);
+            return null;
+        });
+    }
+
     @Test
     void bindsExplicitCalendarDatesAndRejectsMalformedDates() throws Exception {
         ShiftService service = mock(ShiftService.class);
-        var mvc = MockMvcBuilders.standaloneSetup(new ShiftController(service)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new ShiftController(mockAccess(), service)).build();
         UUID tenant = UUID.randomUUID();
         UUID user = UUID.randomUUID();
         LocalDate from = LocalDate.parse("2026-11-09");
@@ -37,7 +44,7 @@ class ShiftControllerTest {
     @Test
     void returnsWindowAndEmptyArrayAndRequiresBothIds() throws Exception {
         ShiftService service = mock(ShiftService.class);
-        var mvc = MockMvcBuilders.standaloneSetup(new ShiftController(service)).build();
+        var mvc = MockMvcBuilders.standaloneSetup(new ShiftController(mockAccess(), service)).build();
         UUID tenant = UUID.randomUUID();
         UUID user = UUID.randomUUID();
         when(service.getShifts(tenant, user)).thenReturn(new GetShiftsResponse("Europe/London",

@@ -26,6 +26,13 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SiteControllerTest {
+    private static com.example.backend_clean_ops.service.ResourceAccess mockAccess() {
+        return org.mockito.Mockito.mock(com.example.backend_clean_ops.service.ResourceAccess.class, invocation -> {
+            if (invocation.getMethod().getReturnType() == java.util.UUID.class) return invocation.getArgument(0);
+            return null;
+        });
+    }
+
 
     @Mock
     private SiteService siteService;
@@ -34,13 +41,13 @@ class SiteControllerTest {
 
     @BeforeEach
     void setUp() {
-        siteController = new SiteController(siteService);
+        siteController = new SiteController(mockAccess(), siteService);
     }
 
     @Test
     @DisplayName("Should delegate site creation to site service and return response")
     void createSite_shouldCallSiteService_andReturnResponse() {
-        CreateSiteRequest request = mock(CreateSiteRequest.class);
+        CreateSiteRequest request = new CreateSiteRequest(UUID.randomUUID(), "Office", "1 Road", "London", "SW1A 1AA");
         CreateSiteResponse expectedResponse = mock(CreateSiteResponse.class);
 
         when(siteService.createSite(request)).thenReturn(expectedResponse);
@@ -56,7 +63,7 @@ class SiteControllerTest {
     @Test
     @DisplayName("Should propagate exception when site service fails")
     void createSite_whenSiteServiceThrows_shouldPropagateException() {
-        CreateSiteRequest request = mock(CreateSiteRequest.class);
+        CreateSiteRequest request = new CreateSiteRequest(UUID.randomUUID(), "Office", "1 Road", "London", "SW1A 1AA");
         RuntimeException exception = new RuntimeException("Unable to create site");
 
         when(siteService.createSite(request)).thenThrow(exception);
@@ -126,7 +133,7 @@ class SiteControllerTest {
     @DisplayName("Should delegate a site edit using the identifier from the URL")
     void editSiteById_shouldPassPathSiteIdAndRequestToService() {
         UUID siteId = UUID.randomUUID();
-        EditSiteRequest request = mock(EditSiteRequest.class);
+        EditSiteRequest request = new EditSiteRequest(UUID.randomUUID(), "Office", "1 Road", null, "London", "SW1A 1AA", null, null, null, null);
 
         siteController.editSiteById(siteId, request);
 

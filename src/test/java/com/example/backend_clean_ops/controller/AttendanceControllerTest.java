@@ -18,6 +18,13 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AttendanceControllerTest {
+    private static com.example.backend_clean_ops.service.ResourceAccess mockAccess() {
+        return org.mockito.Mockito.mock(com.example.backend_clean_ops.service.ResourceAccess.class, invocation -> {
+            if (invocation.getMethod().getReturnType() == java.util.UUID.class) return invocation.getArgument(0);
+            return null;
+        });
+    }
+
 
     @Mock
     private AttendanceService attendanceService;
@@ -26,13 +33,13 @@ class AttendanceControllerTest {
 
     @BeforeEach
     void setUp() {
-        attendanceController = new AttendanceController(attendanceService);
+        attendanceController = new AttendanceController(mockAccess(), attendanceService);
     }
 
     @Test
     @DisplayName("Should delegate clock in to attendance service and return response")
     void clockIn_shouldCallAttendanceService_andReturnResponse() {
-        AttendanceRequest request = org.mockito.Mockito.mock(AttendanceRequest.class);
+        AttendanceRequest request = new AttendanceRequest(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID());
         AttendanceResponse expectedResponse = org.mockito.Mockito.mock(AttendanceResponse.class);
         when(attendanceService.clockIn(request)).thenReturn(expectedResponse);
 
@@ -46,7 +53,7 @@ class AttendanceControllerTest {
     @Test
     @DisplayName("Should propagate exception when clock in fails")
     void clockIn_whenAttendanceServiceThrows_shouldPropagateException() {
-        AttendanceRequest request = org.mockito.Mockito.mock(AttendanceRequest.class);
+        AttendanceRequest request = new AttendanceRequest(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID());
         RuntimeException expectedException = new RuntimeException("Unable to clock in");
         when(attendanceService.clockIn(request)).thenThrow(expectedException);
 
@@ -63,7 +70,7 @@ class AttendanceControllerTest {
     @Test
     @DisplayName("Should delegate clock out to attendance service and return response")
     void clockOut_shouldCallAttendanceService_andReturnResponse() {
-        AttendanceRequest request = org.mockito.Mockito.mock(AttendanceRequest.class);
+        AttendanceRequest request = new AttendanceRequest(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID());
         AttendanceResponse expectedResponse = org.mockito.Mockito.mock(AttendanceResponse.class);
         when(attendanceService.clockOut(request)).thenReturn(expectedResponse);
 
@@ -77,7 +84,7 @@ class AttendanceControllerTest {
     @Test
     @DisplayName("Should propagate exception when clock out fails")
     void clockOut_whenAttendanceServiceThrows_shouldPropagateException() {
-        AttendanceRequest request = org.mockito.Mockito.mock(AttendanceRequest.class);
+        AttendanceRequest request = new AttendanceRequest(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), java.util.UUID.randomUUID());
         RuntimeException expectedException = new RuntimeException("Unable to clock out");
         when(attendanceService.clockOut(request)).thenThrow(expectedException);
 
