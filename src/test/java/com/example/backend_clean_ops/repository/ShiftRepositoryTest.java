@@ -44,6 +44,30 @@ class ShiftRepositoryTest {
         assertThat(repository.findForAttendance(upcoming.getId())).isPresent();
     }
 
+    @Test
+    void findUnstartedScheduledShiftsEndedBy_excludesIneligibleShiftsAndIncludesTheEndBoundary() {
+        Tenant tenant = persistTenant("Tenant");
+        User user = persistUser(tenant);
+        Site site = persistSite(tenant, "Office", SiteStatus.ACTIVE);
+        LocalDateTime cutoff = LocalDateTime.parse("2026-11-16T12:00:00");
+
+        Shift eligible = persistShift(tenant, user, site, cutoff.minusHours(4), cutoff.minusSeconds(1), ShiftStatus.SCHEDULED);
+        Shift atDeadline = persistShift(tenant, user, site, cutoff.minusHours(3), cutoff, ShiftStatus.SCHEDULED);
+        Shift cancelled = persistShift(tenant, user, site, cutoff.minusHours(4), cutoff.minusMinutes(1), ShiftStatus.CANCELLED);
+        Shift clockedIn = persistShift(tenant, user, site, cutoff.minusHours(4), cutoff.minusMinutes(1), ShiftStatus.SCHEDULED);
+        clockedIn.setActualStart(cutoff.minusHours(3));
+        Shift clockedOut = persistShift(tenant, user, site, cutoff.minusHours(4), cutoff.minusMinutes(1), ShiftStatus.SCHEDULED);
+        clockedOut.setActualEnd(cutoff.minusHours(2));
+        Shift removed = persistShift(tenant, user, site, cutoff.minusHours(4), cutoff.minusMinutes(1), ShiftStatus.SCHEDULED);
+        removed.setRemovedAt(cutoff.minusHours(1));
+        entityManager.flush();
+
+        var candidates = repository.findUnstartedScheduledShiftsEndedBy(ShiftStatus.SCHEDULED, cutoff);
+        entityManager.clear();
+
+        assertThat(candidates).extracting(Shift::getId).containsExactlyInAnyOrder(eligible.getId(), atDeadline.getId());
+    }
+
     private Shift persistShift(Tenant tenant, User user, Site site, LocalDateTime start, LocalDateTime end, ShiftStatus status) {
         Shift shift = Shift.builder().tenant(tenant).user(user).site(site).shiftDate(start.toLocalDate())
                 .scheduledStart(start).scheduledEnd(end).status(status).build();

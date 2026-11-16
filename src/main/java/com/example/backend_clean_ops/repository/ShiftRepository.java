@@ -49,4 +49,16 @@ public interface ShiftRepository extends JpaRepository<Shift, UUID> {
     boolean existsByScheduleIdAndSourceUserIdAndSourceScheduledStartAndSourceScheduledEndAndManualOverrideTrue(
             UUID scheduleId, UUID sourceUserId, LocalDateTime sourceScheduledStart, LocalDateTime sourceScheduledEnd);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select s from Shift s
+            where s.status = :scheduledStatus
+              and s.actualStart is null
+              and s.actualEnd is null
+              and s.removedAt is null
+              and s.scheduledEnd <= :now
+            """)
+    List<Shift> findUnstartedScheduledShiftsEndedBy(@Param("scheduledStatus") ShiftStatus scheduledStatus,
+                                                    @Param("now") LocalDateTime now);
+
 }
