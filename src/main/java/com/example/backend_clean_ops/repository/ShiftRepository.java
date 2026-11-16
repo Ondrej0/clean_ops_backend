@@ -16,13 +16,22 @@ import java.util.UUID;
 
 public interface ShiftRepository extends JpaRepository<Shift, UUID> {
     @Query("""
-            select s from Shift s join fetch s.site left join fetch s.schedule
+            select s from Shift s join fetch s.site join fetch s.user left join fetch s.schedule
             where s.tenant.id = :tenantId and s.user.id = :userId
               and s.scheduledStart < :until and s.scheduledEnd > :from
             order by s.scheduledStart, s.id
             """)
     List<Shift> findInWindow(@Param("tenantId") UUID tenantId, @Param("userId") UUID userId,
                              @Param("from") LocalDateTime from, @Param("until") LocalDateTime until);
+
+    @Query("""
+            select s from Shift s join fetch s.site join fetch s.user left join fetch s.schedule
+            where s.tenant.id = :tenantId and s.site.id = :siteId
+              and s.scheduledStart < :until and s.scheduledEnd > :from
+            order by s.scheduledStart, s.id
+            """)
+    List<Shift> findBySiteInWindow(@Param("tenantId") UUID tenantId, @Param("siteId") UUID siteId,
+                                   @Param("from") LocalDateTime from, @Param("until") LocalDateTime until);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Shift s where s.id = :id")

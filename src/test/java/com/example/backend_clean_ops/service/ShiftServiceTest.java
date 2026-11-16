@@ -2,6 +2,7 @@ package com.example.backend_clean_ops.service;
 
 import com.example.backend_clean_ops.entity.Shift;
 import com.example.backend_clean_ops.entity.Site;
+import com.example.backend_clean_ops.entity.User;
 import com.example.backend_clean_ops.enums.ShiftStatus;
 import com.example.backend_clean_ops.repository.ShiftRepository;
 import com.example.backend_clean_ops.repository.UserRepository;
@@ -21,12 +22,18 @@ class ShiftServiceTest {
     private final UUID tenantId = UUID.randomUUID();
     private final UUID userId = UUID.randomUUID();
 
+    private User employee() {
+        User user = User.builder().firstName("Alex").lastName("Smith").build();
+        org.springframework.test.util.ReflectionTestUtils.setField(user, "id", userId);
+        return user;
+    }
+
     @Test
     void explicitCalendarWeekUsesInclusiveDatesAndPreservesShiftIdentityAndScheduleName() {
         when(users.existsByIdAndTenantId(userId, tenantId)).thenReturn(true);
         var from = LocalDate.parse("2026-07-06");
         var to = LocalDate.parse("2026-07-12");
-        Shift shift = Shift.builder().site(Site.builder().name("Office").build())
+        Shift shift = Shift.builder().site(Site.builder().name("Office").build()).user(employee())
                 .schedule(com.example.backend_clean_ops.entity.Schedule.builder().name("Morning clean").build())
                 .scheduledStart(from.atTime(9, 0)).scheduledEnd(from.atTime(12, 0))
                 .status(ShiftStatus.COMPLETED).build();
@@ -37,6 +44,8 @@ class ShiftServiceTest {
         assertEquals(from, result.fromDate());
         assertEquals(to, result.toDate());
         assertEquals(shift.getId(), result.shifts().getFirst().id());
+        assertEquals(userId, result.shifts().getFirst().employee().id());
+        assertEquals("Alex", result.shifts().getFirst().employee().firstName());
         assertEquals("Morning clean", result.shifts().getFirst().scheduleName());
         assertEquals(ZoneOffset.ofHours(1), result.shifts().getFirst().scheduledStart().getOffset());
         verify(shifts).findInWindow(tenantId, userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
@@ -57,7 +66,7 @@ class ShiftServiceTest {
     @Test
     void usesUkDatesAndIncludesHistoryWithNoActions() {
         when(users.existsByIdAndTenantId(userId, tenantId)).thenReturn(true);
-        Shift completed = Shift.builder().site(Site.builder().name("Office").build())
+        Shift completed = Shift.builder().site(Site.builder().name("Office").build()).user(employee())
                 .scheduledStart(LocalDateTime.parse("2026-11-07T09:00:00"))
                 .scheduledEnd(LocalDateTime.parse("2026-11-07T12:00:00"))
                 .status(ShiftStatus.COMPLETED).build();
@@ -77,6 +86,22 @@ class ShiftServiceTest {
     void emptyWindowReturnsEmptyList() {
         when(users.existsByIdAndTenantId(userId, tenantId)).thenReturn(true);
         assertTrue(service.getShifts(tenantId, userId).shifts().isEmpty());
+    }
+
+    @Test
+    void siteWindowReturnsAllEmployeesAtOnlyTheSelectedSite() {
+        UUID siteId = UUID.randomUUID();
+        var from = LocalDate.parse("2026-11-09");
+        var to = LocalDate.parse("2026-11-15");
+        Shift shift = Shift.builder().site(Site.builder().name("Office").build()).user(employee())
+                .scheduledStart(from.atTime(9, 0)).scheduledEnd(from.atTime(12, 0))
+                .status(ShiftStatus.SCHEDULED).build();
+        when(shifts.findBySiteInWindow(tenantId, siteId, from.atStartOfDay(), to.plusDays(1).atStartOfDay()))
+                .thenReturn(List.of(shift));
+        var result = service.getShiftsBySite(tenantId, siteId, from, to);
+        assertEquals(1, result.shifts().size());
+        assertEquals(userId, result.shifts().getFirst().employee().id());
+        verify(shifts).findBySiteInWindow(tenantId, siteId, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
     }
 
     @Test

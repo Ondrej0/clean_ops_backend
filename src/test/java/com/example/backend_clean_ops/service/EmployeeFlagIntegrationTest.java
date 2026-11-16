@@ -223,7 +223,8 @@ class EmployeeFlagIntegrationTest {
         mvc.perform(get("/api/session/me").session(session)).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(cleaner.getId().toString()));
         mvc.perform(get("/api/shifts").session(session).param("fromDate", "2026-11-09").param("toDate", "2026-11-15")
                 )
-                .andExpect(status().isOk()).andExpect(jsonPath("$.shifts.length()").value(2));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.shifts.length()").value(2))
+                .andExpect(jsonPath("$.shifts[0].employee.id").value(cleaner.getId().toString()));
         mvc.perform(get("/api/session/csrf").session(session)).andExpect(status().isOk()).andExpect(jsonPath("$.token").isNotEmpty());
         mvc.perform(post("/api/employee-flags/schedule-overlaps").session(session).with(csrf()).contentType("application/json").content(REPORT))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.created").value(1));
@@ -280,6 +281,12 @@ class EmployeeFlagIntegrationTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/shifts").with(user(manager.getId().toString())).param("userId", cleaner.getId().toString()))
                 .andExpect(status().isOk());
+        mvc.perform(get("/api/shifts").with(user(manager.getId().toString())).param("siteId", site.getId().toString()))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/shifts").with(user(cleaner.getId().toString())).param("siteId", site.getId().toString()))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/shifts").with(user(outsider.getId().toString())).param("siteId", site.getId().toString()))
+                .andExpect(status().isNotFound());
         mvc.perform(get("/api/cleaner").with(user(cleaner.getId().toString()))).andExpect(status().isForbidden());
         mvc.perform(get("/api/cleaner/{id}", cleaner.getId()).with(user(outsider.getId().toString()))).andExpect(status().isNotFound());
         mvc.perform(get("/api/cleaner/{id}", colleague.getId()).with(user(cleaner.getId().toString()))).andExpect(status().isForbidden());

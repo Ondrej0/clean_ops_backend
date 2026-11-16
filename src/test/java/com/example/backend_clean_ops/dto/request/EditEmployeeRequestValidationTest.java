@@ -41,7 +41,7 @@ class EditEmployeeRequestValidationTest {
                 .map(violation -> violation.getPropertyPath().toString())
                 .collect(java.util.stream.Collectors.toSet());
 
-        assertEquals(Set.of("tenantId", "firstName", "lastName", "email", "role", "payRate"), invalidFields);
+        assertEquals(Set.of("firstName", "lastName", "email", "role", "payRate"), invalidFields);
     }
 
     @Test

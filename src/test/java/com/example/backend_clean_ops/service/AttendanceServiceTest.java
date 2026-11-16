@@ -185,11 +185,9 @@ class AttendanceServiceTest {
     }
 
     @Test
-    void clockIn_ignoresClientTimestampAndUsesServerTime() {
+    void clockIn_usesServerTime() {
         TestData data = matchingTestData();
-        AttendanceRequest forged = new AttendanceRequest(data.request().tenantId(), data.request().siteId(),
-                data.request().shiftId(), data.request().userId(), data.clockedAt().minusDays(1));
-        attendanceService.clockIn(forged);
+        attendanceService.clockIn(data.request());
         assertEquals(data.clockedAt(), data.shift().getActualStart());
     }
 
@@ -230,6 +228,7 @@ class AttendanceServiceTest {
 
     private TestData matchingTestData() {
         AttendanceRequest request = request();
+        LocalDateTime clockedAt = LocalDateTime.of(2026, 7, 27, 9, 30);
         Shift shift = new Shift();
         Tenant requestedTenant = mock(Tenant.class);
         Tenant shiftTenant = mock(Tenant.class);
@@ -238,8 +237,8 @@ class AttendanceServiceTest {
         Site requestedSite = mock(Site.class);
         Site shiftSite = mock(Site.class);
 
-        shift.setScheduledStart(request.clockedIn());
-        shift.setScheduledEnd(request.clockedIn().plusHours(3));
+        shift.setScheduledStart(clockedAt);
+        shift.setScheduledEnd(clockedAt.plusHours(3));
         shift.setTenant(shiftTenant);
         shift.setUser(shiftUser);
         shift.setSite(shiftSite);
@@ -255,7 +254,7 @@ class AttendanceServiceTest {
         lenient().when(requestedSite.getId()).thenReturn(request.siteId());
         lenient().when(shiftSite.getId()).thenReturn(request.siteId());
 
-        return new TestData(request, shift, shiftTenant, shiftUser, shiftSite, request.clockedIn());
+        return new TestData(request, shift, shiftTenant, shiftUser, shiftSite, clockedAt);
     }
 
     private AttendanceRequest request() {
@@ -263,8 +262,7 @@ class AttendanceServiceTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 UUID.randomUUID(),
-                UUID.randomUUID(),
-                LocalDateTime.of(2026, 7, 27, 9, 30)
+                UUID.randomUUID()
         );
     }
 

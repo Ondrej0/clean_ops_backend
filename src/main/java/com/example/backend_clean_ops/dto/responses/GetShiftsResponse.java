@@ -8,9 +8,10 @@ import java.util.UUID;
 
 public record GetShiftsResponse(String timezone, LocalDate fromDate, LocalDate toDate, List<ShiftDetails> shifts) {
     public record SiteDetails(UUID id, String name) {}
+    public record EmployeeDetails(UUID id, String firstName, String lastName) {}
 
     public record ShiftDetails(
-            UUID id, SiteDetails site, String scheduleName,
+            UUID id, SiteDetails site, EmployeeDetails employee, String scheduleName,
             OffsetDateTime scheduledStart, OffsetDateTime scheduledEnd,
             OffsetDateTime actualStart, OffsetDateTime actualEnd, ShiftStatus status,
             OffsetDateTime clockInOpensAt, OffsetDateTime clockInDeadline,

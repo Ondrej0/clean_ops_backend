@@ -40,6 +40,6 @@ class EditSiteRequestValidationTest {
                 .map(violation -> violation.getPropertyPath().toString())
                 .collect(java.util.stream.Collectors.toSet());
 
-        assertEquals(Set.of("tenantId", "name", "addressLine1", "city", "postcode", "contactEmail", "hourlyRate"), invalidFields);
+        assertEquals(Set.of("name", "addressLine1", "city", "postcode", "contactEmail", "hourlyRate"), invalidFields);
     }
 }

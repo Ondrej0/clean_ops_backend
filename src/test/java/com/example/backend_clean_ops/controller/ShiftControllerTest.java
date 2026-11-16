@@ -62,4 +62,29 @@ class ShiftControllerTest {
         verify(service).getShifts(tenant, user);
         verifyNoMoreInteractions(service);
     }
+
+    @Test
+    void filtersBySiteAndRejectsCombiningSiteAndEmployee() throws Exception {
+        ShiftService service = mock(ShiftService.class);
+        var access = mockAccess();
+        var mvc = MockMvcBuilders.standaloneSetup(new ShiftController(access, service)).build();
+        UUID tenant = UUID.randomUUID();
+        UUID site = UUID.randomUUID();
+        LocalDate from = LocalDate.parse("2026-11-09");
+        LocalDate to = LocalDate.parse("2026-11-15");
+        when(service.getShiftsBySite(tenant, site, from, to))
+                .thenReturn(new GetShiftsResponse("Europe/London", from, to, List.of()));
+
+        mvc.perform(get("/api/shifts").param("tenantId", tenant.toString()).param("siteId", site.toString())
+                        .param("fromDate", from.toString()).param("toDate", to.toString()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.shifts").isEmpty());
+        verify(access).manager();
+        verify(access).site(site);
+        verify(service).getShiftsBySite(tenant, site, from, to);
+
+        mvc.perform(get("/api/shifts").param("userId", UUID.randomUUID().toString())
+                        .param("siteId", site.toString()))
+                .andExpect(status().isBadRequest());
+        verifyNoMoreInteractions(service);
+    }
 }

@@ -28,14 +28,19 @@ class ShiftRepositoryTest {
         Shift upcoming = persistShift(tenant, user, site, until.minusHours(1), until.plusHours(2), ShiftStatus.SCHEDULED);
         persistShift(tenant, user, site, from.minusHours(3), from, ShiftStatus.COMPLETED);
         persistShift(tenant, user, site, until, until.plusHours(2), ShiftStatus.SCHEDULED);
-        persistShift(tenant, persistUser(tenant), site, from, from.plusHours(2), ShiftStatus.SCHEDULED);
+        Shift colleague = persistShift(tenant, persistUser(tenant), site, from, from.plusHours(2), ShiftStatus.SCHEDULED);
+        Site otherSite = persistSite(tenant, "Warehouse", SiteStatus.ACTIVE);
+        Shift otherSiteShift = persistShift(tenant, user, otherSite, from.plusMinutes(1), from.plusHours(2), ShiftStatus.SCHEDULED);
         Tenant other = persistTenant("Other tenant");
         persistShift(other, persistUser(other), persistSite(other, "Other", SiteStatus.ACTIVE), from, from.plusHours(2), ShiftStatus.SCHEDULED);
         entityManager.flush();
         entityManager.clear();
         assertThat(repository.findInWindow(tenant.getId(), user.getId(), from, until))
-                .extracting(Shift::getId).containsExactly(overnight.getId(), cancelled.getId(), noShow.getId(), upcoming.getId());
+                .extracting(Shift::getId).containsExactly(overnight.getId(), otherSiteShift.getId(), cancelled.getId(), noShow.getId(), upcoming.getId());
         assertThat(repository.findInWindow(other.getId(), user.getId(), from, until)).isEmpty();
+        assertThat(repository.findBySiteInWindow(tenant.getId(), site.getId(), from, until))
+                .extracting(Shift::getId).containsExactly(overnight.getId(), colleague.getId(), cancelled.getId(), noShow.getId(), upcoming.getId());
+        assertThat(repository.findBySiteInWindow(other.getId(), site.getId(), from, until)).isEmpty();
         assertThat(repository.findForAttendance(upcoming.getId())).isPresent();
     }
 
