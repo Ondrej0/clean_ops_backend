@@ -195,7 +195,7 @@ public class ScheduleService {
 
     private void deleteFutureScheduledShifts(Schedule schedule) {
         long deletedShifts =
-                shiftRepository.deleteByScheduleIdAndShiftDateGreaterThanEqualAndStatus(
+                shiftRepository.deleteGeneratedBySchedule(
                         schedule.getId(),
                         LocalDate.now(),
                         ShiftStatus.SCHEDULED
@@ -286,6 +286,11 @@ public class ScheduleService {
                     scheduledEnd = scheduledEnd.plusDays(1);
                 }
 
+                if (shiftRepository.existsByScheduleIdAndSourceUserIdAndSourceScheduledStartAndSourceScheduledEndAndManualOverrideTrue(
+                        schedule.getId(), cleaner.getId(), scheduledStart, scheduledEnd)) {
+                    continue;
+                }
+
                 Shift shift = new Shift();
                 shift.setTenant(tenant);
                 shift.setSite(schedule.getSite());
@@ -294,6 +299,9 @@ public class ScheduleService {
                 shift.setShiftDate(shiftDate);
                 shift.setScheduledStart(scheduledStart);
                 shift.setScheduledEnd(scheduledEnd);
+                shift.setSourceUserId(cleaner.getId());
+                shift.setSourceScheduledStart(scheduledStart);
+                shift.setSourceScheduledEnd(scheduledEnd);
                 shift.setStatus(ShiftStatus.SCHEDULED);
 
                 shiftRepository.save(shift);

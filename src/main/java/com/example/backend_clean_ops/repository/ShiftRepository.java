@@ -17,7 +17,7 @@ import java.util.UUID;
 public interface ShiftRepository extends JpaRepository<Shift, UUID> {
     @Query("""
             select s from Shift s join fetch s.site join fetch s.user left join fetch s.schedule
-            where s.tenant.id = :tenantId and s.user.id = :userId
+            where s.tenant.id = :tenantId and s.user.id = :userId and s.removedAt is null
               and s.scheduledStart < :until and s.scheduledEnd > :from
             order by s.scheduledStart, s.id
             """)
@@ -26,7 +26,7 @@ public interface ShiftRepository extends JpaRepository<Shift, UUID> {
 
     @Query("""
             select s from Shift s join fetch s.site join fetch s.user left join fetch s.schedule
-            where s.tenant.id = :tenantId and s.site.id = :siteId
+            where s.tenant.id = :tenantId and s.site.id = :siteId and s.removedAt is null
               and s.scheduledStart < :until and s.scheduledEnd > :from
             order by s.scheduledStart, s.id
             """)
@@ -34,13 +34,19 @@ public interface ShiftRepository extends JpaRepository<Shift, UUID> {
                                    @Param("from") LocalDateTime from, @Param("until") LocalDateTime until);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select s from Shift s where s.id = :id")
+    @Query("select s from Shift s where s.id = :id and s.removedAt is null")
     Optional<Shift> findForAttendance(@Param("id") UUID id);
 
-    long deleteByScheduleIdAndShiftDateGreaterThanEqualAndStatus(
-            UUID scheduleId,
-            LocalDate shiftDate,
-            ShiftStatus status
-    );
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Shift s join fetch s.tenant join fetch s.site join fetch s.user left join fetch s.schedule where s.id = :id and s.removedAt is null")
+    Optional<Shift> findForManagerUpdate(@Param("id") UUID id);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("delete from Shift s where s.schedule.id = :scheduleId and s.shiftDate >= :shiftDate and s.status = :status and s.manualOverride = false")
+    long deleteGeneratedBySchedule(@Param("scheduleId") UUID scheduleId, @Param("shiftDate") LocalDate shiftDate,
+                                   @Param("status") ShiftStatus status);
+
+    boolean existsByScheduleIdAndSourceUserIdAndSourceScheduledStartAndSourceScheduledEndAndManualOverrideTrue(
+            UUID scheduleId, UUID sourceUserId, LocalDateTime sourceScheduledStart, LocalDateTime sourceScheduledEnd);
 
 }

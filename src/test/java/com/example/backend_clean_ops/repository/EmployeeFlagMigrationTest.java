@@ -27,7 +27,7 @@ class EmployeeFlagMigrationTest {
             }
             var migrations = Flyway.configure().dataSource(dataSource).load();
             migrations.migrate();
-            assertThat(migrations.info().current().getVersion().toString()).isEqualTo("4");
+            assertThat(migrations.info().current().getVersion().toString()).isEqualTo("5");
             String stored;
             try (var query = db.createStatement(); var rows = query.executeQuery("select password_hash from \"user\"")) {
                 rows.next(); stored = rows.getString(1);

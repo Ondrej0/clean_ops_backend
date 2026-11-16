@@ -16,6 +16,7 @@ public record GetShiftsResponse(String timezone, LocalDate fromDate, LocalDate t
             OffsetDateTime actualStart, OffsetDateTime actualEnd, ShiftStatus status,
             OffsetDateTime clockInOpensAt, OffsetDateTime clockInDeadline,
             OffsetDateTime clockOutDeadline,
-            boolean canClockIn, boolean canClockOut, boolean requiresManagerCorrection
+            boolean canClockIn, boolean canClockOut, boolean requiresManagerCorrection,
+            String origin, boolean managerEditable
     ) {}
 }

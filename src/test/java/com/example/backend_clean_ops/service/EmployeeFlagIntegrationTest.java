@@ -305,6 +305,30 @@ class EmployeeFlagIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test void managerCreatesReassignsAndRemovesOneOffShiftWhileCleanerCannotMutate() throws Exception {
+        String create = "{\"siteId\":\"" + site.getId() + "\",\"userId\":\"" + cleaner.getId()
+                + "\",\"scheduledStart\":\"2099-11-20T09:00:00\",\"scheduledEnd\":\"2099-11-20T12:00:00\"}";
+        mvc.perform(post("/api/shifts").with(user(cleaner.getId().toString())).with(csrf())
+                        .contentType("application/json").content(create))
+                .andExpect(status().isForbidden());
+        var created = mvc.perform(post("/api/shifts").with(user(manager.getId().toString())).with(csrf())
+                        .contentType("application/json").content(create))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.origin").value("ONE_OFF"))
+                .andExpect(jsonPath("$.managerEditable").value(true)).andReturn();
+        String shiftId = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+        String update = "{\"userId\":\"" + colleague.getId()
+                + "\",\"scheduledStart\":\"2099-11-21T10:00:00\",\"scheduledEnd\":\"2099-11-21T13:00:00\"}";
+        mvc.perform(put("/api/shifts/{id}", shiftId).with(user(manager.getId().toString())).with(csrf())
+                        .contentType("application/json").content(update))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.employee.id").value(colleague.getId().toString()));
+        mvc.perform(delete("/api/shifts/{id}", shiftId).with(user(manager.getId().toString())).with(csrf()))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/shifts").with(user(manager.getId().toString())).param("siteId", site.getId().toString())
+                        .param("fromDate", "2099-11-17").param("toDate", "2099-11-23"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.shifts").isEmpty());
+    }
+
     @Test void schedulesAndSitesUseTheSessionTenantAndAssignments() throws Exception {
         Schedule assigned = Schedule.builder().tenant(tenant).site(site).name("Assigned").build();
         Schedule unassigned = Schedule.builder().tenant(tenant).site(site).name("Unassigned").build();

@@ -13,6 +13,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "shift")
@@ -38,6 +39,22 @@ public class Shift extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id")
     private Schedule schedule;
+
+    @Column(name = "source_user_id")
+    private UUID sourceUserId;
+
+    @Column(name = "source_scheduled_start")
+    private LocalDateTime sourceScheduledStart;
+
+    @Column(name = "source_scheduled_end")
+    private LocalDateTime sourceScheduledEnd;
+
+    @Builder.Default
+    @Column(name = "manual_override", nullable = false)
+    private boolean manualOverride = false;
+
+    @Column(name = "removed_at")
+    private LocalDateTime removedAt;
 
     @Column(name = "shift_date", nullable = false)
     private LocalDate shiftDate;

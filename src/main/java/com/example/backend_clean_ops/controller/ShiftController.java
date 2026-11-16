@@ -1,9 +1,13 @@
 package com.example.backend_clean_ops.controller;
 
 import com.example.backend_clean_ops.dto.responses.GetShiftsResponse;
+import com.example.backend_clean_ops.dto.request.CreateShiftRequest;
+import com.example.backend_clean_ops.dto.request.UpdateShiftRequest;
 import com.example.backend_clean_ops.service.ShiftService;
 import com.example.backend_clean_ops.service.ResourceAccess;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 import java.time.LocalDate;
@@ -36,5 +40,26 @@ public class ShiftController {
         if (userId == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Select an employee.");
         if (fromDate == null && toDate == null) return shiftService.getShifts(tenantId, userId);
         return shiftService.getShifts(tenantId, userId, fromDate, toDate);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public GetShiftsResponse.ShiftDetails createShift(@Valid @RequestBody CreateShiftRequest request) {
+        access.manager();
+        return shiftService.createShift(access.tenant(null), request);
+    }
+
+    @PutMapping("/{shiftId}")
+    public GetShiftsResponse.ShiftDetails updateShift(@PathVariable UUID shiftId,
+            @Valid @RequestBody UpdateShiftRequest request) {
+        access.manager();
+        return shiftService.updateShift(access.tenant(null), shiftId, request);
+    }
+
+    @DeleteMapping("/{shiftId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeShift(@PathVariable UUID shiftId) {
+        access.manager();
+        shiftService.removeShift(access.tenant(null), shiftId);
     }
 }

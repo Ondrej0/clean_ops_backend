@@ -416,7 +416,7 @@ class ScheduleServiceTest {
 
         verify(scheduleRepository).findById(scheduleId);
         verify(schedule).setName("Updated Weekday Shift");
-        verify(shiftRepository).deleteByScheduleIdAndShiftDateGreaterThanEqualAndStatus(
+        verify(shiftRepository).deleteGeneratedBySchedule(
                 eq(scheduleId),
                 eq(LocalDate.now()),
                 eq(ShiftStatus.SCHEDULED)
@@ -425,6 +425,8 @@ class ScheduleServiceTest {
         verify(scheduleRuleRepository).save(ruleCaptor.capture());
         verify(scheduleRuleRepository).findByScheduleId(scheduleId);
         verify(scheduleAssignmentRepository).findByScheduleId(scheduleId);
+        verify(shiftRepository, times(5)).existsByScheduleIdAndSourceUserIdAndSourceScheduledStartAndSourceScheduledEndAndManualOverrideTrue(
+                eq(scheduleId), nullable(UUID.class), any(LocalDateTime.class), any(LocalDateTime.class));
         verify(shiftRepository, times(5)).save(shiftCaptor.capture());
 
         ScheduleRule savedRule = ruleCaptor.getValue();
@@ -454,6 +456,8 @@ class ScheduleServiceTest {
                     () -> assertEquals(expectedDate, shift.getShiftDate()),
                     () -> assertEquals(expectedStart, shift.getScheduledStart()),
                     () -> assertEquals(expectedEnd, shift.getScheduledEnd()),
+                    () -> assertEquals(expectedStart, shift.getSourceScheduledStart()),
+                    () -> assertEquals(expectedEnd, shift.getSourceScheduledEnd()),
                     () -> assertEquals(ShiftStatus.SCHEDULED, shift.getStatus())
             );
         }
@@ -485,6 +489,7 @@ class ScheduleServiceTest {
         when(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
         when(userRepository.findById(cleanerId)).thenReturn(Optional.of(cleaner));
         when(cleaner.getRole()).thenReturn(UserRole.CLEANER);
+        when(cleaner.getId()).thenReturn(cleanerId);
         when(schedule.getId()).thenReturn(scheduleId);
         when(schedule.getTenant()).thenReturn(tenant);
         when(schedule.getSite()).thenReturn(site);
@@ -513,6 +518,8 @@ class ScheduleServiceTest {
         verify(scheduleAssignmentRepository).existsByScheduleIdAndUserId(scheduleId, cleanerId);
         verify(scheduleAssignmentRepository).save(assignmentCaptor.capture());
         verify(scheduleRuleRepository).findByScheduleId(scheduleId);
+        verify(shiftRepository, times(10)).existsByScheduleIdAndSourceUserIdAndSourceScheduledStartAndSourceScheduledEndAndManualOverrideTrue(
+                eq(scheduleId), eq(cleanerId), any(LocalDateTime.class), any(LocalDateTime.class));
         verify(shiftRepository, times(10)).save(shiftCaptor.capture());
 
         ScheduleAssignment savedAssignmentEntity = assignmentCaptor.getValue();

@@ -1,15 +1,22 @@
 package com.example.backend_clean_ops.controller;
 
 import com.example.backend_clean_ops.dto.responses.GetShiftsResponse;
+import com.example.backend_clean_ops.dto.request.CreateShiftRequest;
+import com.example.backend_clean_ops.dto.request.UpdateShiftRequest;
 import com.example.backend_clean_ops.service.ShiftService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.http.MediaType;
 
 class ShiftControllerTest {
     private static com.example.backend_clean_ops.service.ResourceAccess mockAccess() {
@@ -86,5 +93,32 @@ class ShiftControllerTest {
                         .param("siteId", site.toString()))
                 .andExpect(status().isBadRequest());
         verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void managerCreatesUpdatesAndRemovesOneOffShifts() throws Exception {
+        ShiftService service = mock(ShiftService.class);
+        var access = mockAccess();
+        UUID tenant = UUID.randomUUID();
+        when(access.tenant(null)).thenReturn(tenant);
+        var mvc = MockMvcBuilders.standaloneSetup(new ShiftController(access, service)).build();
+        UUID shift = UUID.randomUUID();
+        UUID site = UUID.randomUUID();
+        UUID user = UUID.randomUUID();
+        String create = "{\"siteId\":\"" + site + "\",\"userId\":\"" + user
+                + "\",\"scheduledStart\":\"2026-11-20T09:00:00\",\"scheduledEnd\":\"2026-11-20T12:00:00\"}";
+        String update = "{\"userId\":\"" + user + "\",\"scheduledStart\":\"2026-11-21T10:00:00\","
+                + "\"scheduledEnd\":\"2026-11-21T13:00:00\"}";
+
+        mvc.perform(post("/api/shifts").contentType(MediaType.APPLICATION_JSON).content(create))
+                .andExpect(status().isCreated());
+        mvc.perform(put("/api/shifts/{id}", shift).contentType(MediaType.APPLICATION_JSON).content(update))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/shifts/{id}", shift)).andExpect(status().isNoContent());
+
+        verify(access, times(3)).manager();
+        verify(service).createShift(eq(tenant), any(CreateShiftRequest.class));
+        verify(service).updateShift(eq(tenant), eq(shift), any(UpdateShiftRequest.class));
+        verify(service).removeShift(tenant, shift);
     }
 }
