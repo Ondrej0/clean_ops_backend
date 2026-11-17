@@ -1,3 +1,3 @@
 package com.example.backend_clean_ops.enums;
 
-public enum EmployeeFlagType { SCHEDULE_OVERLAP }
+public enum EmployeeFlagType { SCHEDULE_OVERLAP, ATTENDANCE_EXCEPTION }

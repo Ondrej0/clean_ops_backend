@@ -31,6 +31,7 @@ public class AttendanceService {
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
     private final SiteRepository siteRepository;
+    private final EmployeeFlagService employeeFlags;
 
     private final ShiftTimingPolicy timing;
     private final Clock clock;
@@ -111,6 +112,7 @@ public class AttendanceService {
         shift.setStatus(ShiftStatus.COMPLETED);
 
         shiftRepository.save(shift);
+        employeeFlags.recordAttendanceException(shift);
 
         return new AttendanceResponse(shift.getStatus());
     }

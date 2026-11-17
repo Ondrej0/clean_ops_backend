@@ -24,6 +24,44 @@ public class EmployeeFlagService {
     private final Clock clock;
     public record ReportResult(int detected, int created, int alreadyReported) {}
 
+    /** Records a completed shift's timing variance once; it never changes attendance itself. */
+    @Transactional
+    public void recordAttendanceException(Shift shift) {
+        if (shift.getStatus() != ShiftStatus.COMPLETED || shift.getActualStart() == null || shift.getActualEnd() == null)
+            return;
+        LocalDateTime scheduledStart = shift.getScheduledStart();
+        LocalDateTime scheduledEnd = shift.getScheduledEnd();
+        LocalDateTime actualStart = shift.getActualStart();
+        LocalDateTime actualEnd = shift.getActualEnd();
+        List<String> deviations = new ArrayList<>();
+        if (actualStart.isAfter(scheduledStart)) deviations.add("Late by " + duration(actualStart, scheduledStart));
+        if (actualEnd.isBefore(scheduledEnd)) deviations.add("Left early by " + duration(scheduledEnd, actualEnd));
+        Duration scheduled = Duration.between(scheduledStart, scheduledEnd);
+        Duration worked = Duration.between(actualStart, actualEnd);
+        if (worked.compareTo(scheduled) < 0) deviations.add("Worked " + duration(worked) + " of " + duration(scheduled));
+        if (deviations.isEmpty()) return;
+
+        UUID tenant = shift.getTenant().getId();
+        UUID employee = shift.getUser().getId();
+        String key = "attendance:" + shift.getId();
+        if (flags.existsByTenantIdAndEmployeeIdAndTypeAndOpenConflictKey(tenant, employee,
+                EmployeeFlagType.ATTENDANCE_EXCEPTION, key)) return;
+        EmployeeFlag flag = new EmployeeFlag();
+        flag.setTenantId(tenant);
+        flag.setEmployeeId(employee);
+        flag.setEmployeeName(shift.getUser().getFirstName() + " " + shift.getUser().getLastName());
+        flag.setType(EmployeeFlagType.ATTENDANCE_EXCEPTION);
+        flag.setStatus(EmployeeFlagStatus.OPEN);
+        flag.setConflictKey(key);
+        flag.setOpenConflictKey(key);
+        flag.setFirstShiftId(shift.getId());
+        flag.setMessage("Scheduled " + timestamp(scheduledStart) + "–" + timestamp(scheduledEnd)
+                + "; actual " + timestamp(actualStart) + "–" + timestamp(actualEnd) + ". "
+                + String.join("; ", deviations) + ". Times are in " + ShiftTimingPolicy.ZONE.getId() + ".");
+        flag.setCreatedAt(clock.instant());
+        flags.save(flag);
+    }
+
     @Transactional
     public ReportResult report(LocalDate from, LocalDate to) {
         User actor = current.require(UserRole.CLEANER);
@@ -94,5 +132,20 @@ public class EmployeeFlagService {
         var format = DateTimeFormatter.ofPattern("EEE dd MMM uuuu HH:mm", Locale.UK);
         return shift.getSite().getName() + " · " + (shift.getSchedule() == null ? "Shift" : shift.getSchedule().getName())
                 + " (" + shift.getScheduledStart().format(format) + " – " + shift.getScheduledEnd().format(format) + ")";
+    }
+
+    private String timestamp(LocalDateTime value) {
+        return value.format(DateTimeFormatter.ofPattern("EEE dd MMM uuuu HH:mm", Locale.UK));
+    }
+
+    private String duration(LocalDateTime later, LocalDateTime earlier) {
+        return duration(Duration.between(earlier, later));
+    }
+
+    private String duration(Duration value) {
+        long minutes = value.abs().toMinutes();
+        long hours = minutes / 60;
+        long remainder = minutes % 60;
+        return (hours > 0 ? hours + "h" : "") + (remainder > 0 ? (hours > 0 ? " " : "") + remainder + "m" : (hours == 0 ? "0m" : ""));
     }
 }

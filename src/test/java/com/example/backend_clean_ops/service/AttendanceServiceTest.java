@@ -49,6 +49,8 @@ class AttendanceServiceTest {
     private UserRepository userRepository;
     @Mock
     private SiteRepository siteRepository;
+    @Mock
+    private EmployeeFlagService employeeFlags;
 
     private AttendanceService attendanceService;
 
@@ -59,6 +61,7 @@ class AttendanceServiceTest {
                 tenantRepository,
                 userRepository,
                 siteRepository,
+                employeeFlags,
                 new ShiftTimingPolicy(),
                 Clock.fixed(Instant.parse("2026-07-27T08:30:00Z"), ZoneOffset.UTC)
         );
@@ -78,6 +81,7 @@ class AttendanceServiceTest {
                 () -> assertEquals(ShiftStatus.IN_PROGRESS, response.shiftStatus())
         );
         verifyLookupsAndSave(data);
+        verifyNoInteractions(employeeFlags);
     }
 
     @Test
@@ -96,6 +100,7 @@ class AttendanceServiceTest {
                 () -> assertEquals(ShiftStatus.COMPLETED, response.shiftStatus())
         );
         verifyLookupsAndSave(data);
+        verify(employeeFlags).recordAttendanceException(data.shift());
     }
 
     @Test

@@ -11,6 +11,9 @@ public interface EmployeeFlagRepository extends JpaRepository<EmployeeFlag, UUID
     boolean existsByTenantIdAndEmployeeIdAndTypeAndOpenConflictKey(UUID tenantId, UUID employeeId,
             EmployeeFlagType type, String openConflictKey);
 
+    List<EmployeeFlag> findByTenantIdAndTypeAndFirstShiftIdIn(UUID tenantId, EmployeeFlagType type,
+            Collection<UUID> firstShiftIds);
+
     @Query("""
             select f from EmployeeFlag f where f.tenantId = :tenantId
             and (:employeeId is null or f.employeeId = :employeeId)

@@ -13,6 +13,7 @@ import com.example.backend_clean_ops.repository.SiteRepository;
 import com.example.backend_clean_ops.repository.ShiftRepository;
 import com.example.backend_clean_ops.repository.TenantRepository;
 import com.example.backend_clean_ops.repository.UserRepository;
+import com.example.backend_clean_ops.repository.EmployeeFlagRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.*;
@@ -25,9 +26,10 @@ class ShiftServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final TenantRepository tenants = mock(TenantRepository.class);
     private final SiteRepository sites = mock(SiteRepository.class);
+    private final EmployeeFlagRepository flags = mock(EmployeeFlagRepository.class);
     // Already November 8 in the UK, although still November 7 in this clock's zone.
     private final ShiftService service = new ShiftService(shifts, users, tenants, sites, new ShiftTimingPolicy(),
-            Clock.fixed(Instant.parse("2026-11-08T00:30:00Z"), ZoneId.of("America/New_York")));
+            Clock.fixed(Instant.parse("2026-11-08T00:30:00Z"), ZoneId.of("America/New_York")), flags);
     private final UUID tenantId = UUID.randomUUID();
     private final UUID userId = UUID.randomUUID();
 

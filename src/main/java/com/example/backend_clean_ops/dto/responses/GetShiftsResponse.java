@@ -9,6 +9,7 @@ import java.util.UUID;
 public record GetShiftsResponse(String timezone, LocalDate fromDate, LocalDate toDate, List<ShiftDetails> shifts) {
     public record SiteDetails(UUID id, String name) {}
     public record EmployeeDetails(UUID id, String firstName, String lastName) {}
+    public record AttendanceException(String status, String message) {}
 
     public record ShiftDetails(
             UUID id, SiteDetails site, EmployeeDetails employee, String scheduleName,
@@ -17,6 +18,6 @@ public record GetShiftsResponse(String timezone, LocalDate fromDate, LocalDate t
             OffsetDateTime clockInOpensAt, OffsetDateTime clockInDeadline,
             OffsetDateTime clockOutDeadline,
             boolean canClockIn, boolean canClockOut, boolean requiresManagerCorrection,
-            String origin, boolean managerEditable
+            String origin, boolean managerEditable, AttendanceException attendanceException
     ) {}
 }

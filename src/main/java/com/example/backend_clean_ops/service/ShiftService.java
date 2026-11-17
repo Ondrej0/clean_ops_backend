@@ -8,12 +8,15 @@ import com.example.backend_clean_ops.dto.request.CreateShiftRequest;
 import com.example.backend_clean_ops.dto.request.UpdateShiftRequest;
 import com.example.backend_clean_ops.entity.Shift;
 import com.example.backend_clean_ops.entity.User;
+import com.example.backend_clean_ops.entity.EmployeeFlag;
 import com.example.backend_clean_ops.enums.ShiftStatus;
 import com.example.backend_clean_ops.enums.UserRole;
 import com.example.backend_clean_ops.repository.SiteRepository;
 import com.example.backend_clean_ops.repository.ShiftRepository;
 import com.example.backend_clean_ops.repository.TenantRepository;
 import com.example.backend_clean_ops.repository.UserRepository;
+import com.example.backend_clean_ops.repository.EmployeeFlagRepository;
+import com.example.backend_clean_ops.enums.EmployeeFlagType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,7 @@ public class ShiftService {
     private final SiteRepository siteRepository;
     private final ShiftTimingPolicy timing;
     private final Clock clock;
+    private final EmployeeFlagRepository employeeFlags;
 
     @Transactional(readOnly = true)
     public GetShiftsResponse getShifts(UUID tenantId, UUID userId) {
@@ -43,7 +47,7 @@ public class ShiftService {
         if (!userRepository.existsByIdAndTenantId(userId, tenantId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found in tenant.");
         }
-        return response(fromDate, toDate, (from, until) -> shiftRepository.findInWindow(tenantId, userId, from, until));
+        return response(tenantId, fromDate, toDate, (from, until) -> shiftRepository.findInWindow(tenantId, userId, from, until));
     }
 
     @Transactional(readOnly = true)
@@ -54,7 +58,7 @@ public class ShiftService {
     @Transactional(readOnly = true)
     public GetShiftsResponse getShiftsBySite(UUID tenantId, UUID siteId, LocalDate fromDate, LocalDate toDate) {
         validateRange(fromDate, toDate);
-        return response(fromDate, toDate, (from, until) -> shiftRepository.findBySiteInWindow(tenantId, siteId, from, until));
+        return response(tenantId, fromDate, toDate, (from, until) -> shiftRepository.findBySiteInWindow(tenantId, siteId, from, until));
     }
 
     @Transactional
@@ -145,13 +149,17 @@ public class ShiftService {
         }
     }
 
-    private GetShiftsResponse response(LocalDate fromDate, LocalDate toDate, ShiftWindowQuery query) {
+    private GetShiftsResponse response(UUID tenantId, LocalDate fromDate, LocalDate toDate, ShiftWindowQuery query) {
         Instant now = clock.instant();
         LocalDate today = now.atZone(ShiftTimingPolicy.ZONE).toLocalDate();
         LocalDate from = fromDate == null ? today.minusDays(3) : fromDate;
         LocalDate to = toDate == null ? today.plusDays(3) : toDate;
-        var shifts = query.find(from.atStartOfDay(), to.plusDays(1).atStartOfDay())
-                .stream().map(shift -> details(shift, now)).toList();
+        var source = query.find(from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+        var exceptionByShift = employeeFlags.findByTenantIdAndTypeAndFirstShiftIdIn(tenantId,
+                        EmployeeFlagType.ATTENDANCE_EXCEPTION, source.stream().map(Shift::getId).toList())
+                .stream().collect(java.util.stream.Collectors.toMap(EmployeeFlag::getFirstShiftId, flag -> flag,
+                        (first, ignored) -> first));
+        var shifts = source.stream().map(shift -> details(shift, now, exceptionByShift.get(shift.getId()))).toList();
         return new GetShiftsResponse(ShiftTimingPolicy.ZONE.getId(), from, to, shifts);
     }
 
@@ -160,7 +168,9 @@ public class ShiftService {
         java.util.List<Shift> find(LocalDateTime from, LocalDateTime until);
     }
 
-    private ShiftDetails details(Shift shift, Instant now) {
+    private ShiftDetails details(Shift shift, Instant now) { return details(shift, now, null); }
+
+    private ShiftDetails details(Shift shift, Instant now, EmployeeFlag attendanceException) {
         String origin = shift.getSchedule() == null ? "ONE_OFF"
                 : shift.isManualOverride() ? "ONE_OFF_OVERRIDE" : "SCHEDULED_OCCURRENCE";
         LocalDateTime localNow = LocalDateTime.ofInstant(now, ShiftTimingPolicy.ZONE);
@@ -173,6 +183,7 @@ public class ShiftService {
                 timing.timestamp(shift.getActualStart()), timing.timestamp(shift.getActualEnd()), shift.getStatus(),
                 timing.clockInOpensAt(shift), timing.clockInDeadline(shift), timing.clockOutDeadline(shift),
                 timing.canClockIn(shift, now), timing.canClockOut(shift, now), timing.requiresManagerCorrection(shift, now),
-                origin, managerEditable);
+                origin, managerEditable, attendanceException == null ? null
+                        : new GetShiftsResponse.AttendanceException(attendanceException.getStatus().name(), attendanceException.getMessage()));
     }
 }
