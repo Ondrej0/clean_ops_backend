@@ -156,6 +156,23 @@ class ShiftServiceTest {
     }
 
     @Test
+    void managerCanCreateAOneOffShiftThatStartedEarlierToday() {
+        Site site = site();
+        User employee = employee();
+        var request = new CreateShiftRequest(site.getId(), userId,
+                LocalDateTime.parse("2026-11-08T00:00"), LocalDateTime.parse("2026-11-08T01:00"));
+        when(tenants.findById(tenantId)).thenReturn(Optional.of(tenant()));
+        when(sites.findById(site.getId())).thenReturn(Optional.of(site));
+        when(users.findById(userId)).thenReturn(Optional.of(employee));
+        when(shifts.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.createShift(tenantId, request);
+
+        assertEquals("ONE_OFF", result.origin());
+        verify(shifts).save(any(Shift.class));
+    }
+
+    @Test
     void editingGeneratedOccurrencePreservesOriginAndDoesNotChangeSchedule() {
         User original = employee();
         User replacement = User.builder().tenant(tenant()).firstName("Sam").lastName("Jones")

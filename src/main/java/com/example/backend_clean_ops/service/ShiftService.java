@@ -126,10 +126,6 @@ public class ShiftService {
                 || Duration.between(start, end).compareTo(Duration.ofHours(24)) > 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shift end must be after start and no more than 24 hours later.");
         }
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ShiftTimingPolicy.ZONE);
-        if (!start.isAfter(now)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shift start must be in the future.");
-        }
     }
 
     private void preserveOrigin(Shift shift) {
